@@ -18,10 +18,10 @@ RUN rm src/*.rs
 # Копирую исходное дерево проекта
 COPY ./backend/src ./src
 
-
 # Сборка релиза
 RUN rm ./target/release/deps/jokehub*
 RUN cargo build $BUILD_ARGS
+
 
 # Финальная сборка
 FROM rust:1.60 
