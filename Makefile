@@ -1,17 +1,23 @@
-GENERAL_ARGS = --release
-BACKEND_ARGS = $(GENERAL_ARGS) -p jokehub
+GENERAL_BUILD_ARGS = --release
+BACKEND_BUILD_ARGS = $(GENERAL_BUILD_ARGS) -p jokehub
 
 .PHONY: \
+	init \
 	build-backend \
 	run-backend \
+	test
 
-run-backend:
-	cd backend && \
-		cargo run $(BACKEND_ARGS)
+init:
+	if [ ! $(BACKEND_BUILD_TYPE) ] ; then  \		
+		export $(cat .env | xargs) ;\
+	fi
+
+run-backend: build-backend
+	docker-compose -f docker-compose.yml up
 
 build-backend: 
-	cd backend && \
-		cargo build $(BACKEND_ARGS)
+	docker-compose -f docker-compose.yml build \
+		--build-arg BUILD_ARGS="$(BACKEND_BUILD_ARGS)"
 
 
 .DEFAULT_GOAL := run-backend
