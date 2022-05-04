@@ -1,0 +1,58 @@
+version: "3.9"
+services:
+  jokehub_backend:
+    build:
+      dockerfile: backend/Dockerfile
+      context: ../
+    env_file:
+      - ../.env
+    ports:
+      - "8000:8000"
+    environment:
+      - ROCKER_ADDRESS=0.0.0.0
+    depends_on:
+      - jokehub_postgres
+    container_name: jokehub_backend
+    restart: unless-stopped
+
+  jokehub_postgres:
+    image: postgres:14.1-alpine
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-q",
+          "-d",
+          "postgres",
+          "-U",
+          "root"
+        ]
+      timeout: 20s
+      interval: 10s
+      retries: 3
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=password
+      - APP_DB_USER=bait
+      - APP_DB_PASS=qwerty
+      - APP_DB_NAME=baitdb
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      - '5432:5432'
+    volumes:
+      - ../tools:/docker-entrypoint-initdb.d/
+      - tools:/var/lib/postgresql/data
+    container_name: jokehub_postgres
+    restart: unless-stopped
+
+volumes:
+  tools:
+    driver: local
+
+networks:
+  default:
+    name: jokehub_net
