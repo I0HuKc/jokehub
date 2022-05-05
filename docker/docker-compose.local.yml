@@ -34,9 +34,9 @@ services:
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=password
-      - APP_DB_USER=bait
+      - APP_DB_USER=joker
       - APP_DB_PASS=qwerty
-      - APP_DB_NAME=baitdb
+      - APP_DB_NAME=jokehub_db
     logging:
       options:
         max-size: 10m

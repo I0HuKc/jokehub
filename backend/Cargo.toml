@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 dotenv = "0.15.0"
+diesel_migrations = "1.4.0"
 
 [dependencies.rocket]
 version = "0.5.0-rc.1"
@@ -16,4 +17,4 @@ features = [ "v4", "fast-rng", "macro-diagnostics"]
 
 [dependencies.diesel]
 version = "1.4.4"
-features = ["postgres"]
+features = ["uuid", "r2d2", "postgres"]

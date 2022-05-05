@@ -1,6 +1,7 @@
 FROM rust:1.60 as build
 
 ARG BUILD_ARGS
+ARG DATABASE_URL
 
 # Создаю новый пустой проект оболочки
 RUN USER=root cargo new --bin jokehub
@@ -10,17 +11,21 @@ WORKDIR /jokehub
 COPY ./backend/Cargo.lock ./Cargo.lock
 COPY ./backend/Cargo.toml ./Cargo.toml
 COPY ./backend/Rocket.toml ./Rocket.toml
+COPY ./backend/diesel.toml ./diesel.toml
+
+# Копирую миграции
+COPY ./backend/migrations ./migrations
 
 # Кэширую зависимости сборки
-RUN cargo build $BUILD_ARGS
-RUN rm src/*.rs
+RUN cargo build $BUILD_ARGS && \
+    rm src/*.rs
 
 # Копирую исходное дерево проекта
 COPY ./backend/src ./src
 
 # Сборка релиза
-RUN rm ./target/release/deps/jokehub*
-RUN cargo build $BUILD_ARGS
+RUN rm ./target/release/deps/jokehub* && \
+    cargo build $BUILD_ARGS
 
 
 # Финальная сборка
