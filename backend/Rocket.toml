@@ -1,3 +1,8 @@
 [global]
 address = "0.0.0.0"
 log_level = "critical"
+
+[global.databases.jokehub_db]
+url = "postgres://joker:qwerty@jokehub_postgres/jokehub_db"
+pool_size = 10
+timeout = 5
