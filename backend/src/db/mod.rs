@@ -1,25 +1,29 @@
-pub mod joke_repository;
-
-use diesel::{
-    connection::Connection,
-    r2d2::{ConnectionManager, Pool},
-    PgConnection,
-};
+use rocket::{Build, Rocket};
 use rocket_sync_db_pools::database;
 
-#[database("jokehub_db")]
-pub struct PgConn(diesel::PgConnection);
+use rocket::fairing::AdHoc;
 
-pub fn run_migrations(db_url: &str) {
-    embed_migrations!();
-    let connection = PgConnection::establish(db_url).expect("Error connecting to database");
-    embedded_migrations::run_with_output(&connection, &mut std::io::stdout())
-        .expect("Error running migrations");
+pub mod joke_repository;
+
+pub trait DbInit {
+    fn manage_db(self) -> Self;
 }
 
-pub fn get_pool(db_url: &str) -> Pool<ConnectionManager<PgConnection>> {
-    let manager = ConnectionManager::<PgConnection>::new(db_url);
-    Pool::builder()
-        .build(manager)
-        .expect("Error building a connection pool")
+#[database("jokehub_db")]
+pub struct Conn(diesel::PgConnection);
+
+impl DbInit for Rocket<Build> {
+    fn manage_db(self) -> Self {
+        self.attach(Conn::fairing())
+            .attach(AdHoc::on_liftoff("", |r| {
+                Box::pin(async move {
+                    embed_migrations!();
+
+                    let conn = Conn::get_one(&r).await.expect("database connection");
+                    conn.run(|c| embedded_migrations::run(c))
+                        .await
+                        .expect("diesel migrations");
+                })
+            }))
+    }
 }

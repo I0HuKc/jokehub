@@ -1,57 +1,26 @@
-use rocket::serde::json::{json, Json, Value};
-use rocket::{routes, Build, Rocket};
-use uuid::Uuid;
-use chrono::Utc;
+use rocket::{response::status::Created, serde::json::Json, Build, Rocket};
 
-use crate::db::PgConn;
+use crate::{
+    db::{joke_repository, joke_repository::NewJokeOutcome, Conn, DbInit},
+    model::joke::{Joke, NewJoke},
+    Error,
+};
 
-use crate::model::joke::{Joke, NewJoke};
-
-#[get("/<language>/random", format = "json")]
-fn random_category(language: &str) -> Option<Json<Joke>> {
-    Some(Json(Joke {
-        uuid: Uuid::new_v4(),
-        category: "programming".to_string(),
-        language: language.to_string(),
-        setup: "Как называется бесполезная кожа вокруг вагины?".to_string(),
-        punchline: Some("Женщина".to_string()),
-        created_at: Utc::now().naive_utc(),
-    }))
+pub trait Server {
+    fn launch(self) -> Self;
 }
 
-#[get("/<language>/<category>/random", format = "json")]
-fn random(language: &str, category: &str) -> Option<Json<Joke>> {
-    Some(Json(Joke {
-        uuid: Uuid::new_v4(),
-        category: category.to_string(),
-        language: language.to_string(),
-        setup: "Как называется бесполезная кожа вокруг вагины?".to_string(),
-        punchline: Some("Женщина".to_string()),
-        created_at: Utc::now().naive_utc(),
-    }))
+#[rocket::post("/", data = "<nj>")]
+async fn create(c: Conn, nj: Json<NewJoke>) -> Result<Created<Json<Joke>>, Json<Error>> {
+    match joke_repository::create(c, NewJoke::from(nj)).await {
+        NewJokeOutcome::Ok(j) => Ok(Created::new("/").body(Json(j))),
+        NewJokeOutcome::Other(err) => Err(Json(err)),
+    }
 }
 
-#[post("/new", format = "json", data = "<joke>")]
-fn new_joke(conn: PgConn, joke: Json<NewJoke>) -> Option<Json<Joke>> {
-    // conn.run(move |c| {
-    //     diesel::insert_into(target)
-    // });
-    
-    
-    Some(Json(Joke::from(joke.0)))
-}
-
-#[catch(404)]
-fn not_found() -> Value {
-    json!({
-        "status": "error",
-        "reason": "Resource was not found."
-    })
-}
-
-pub fn launcher() -> Rocket<Build> {
-    rocket::build()
-        .attach(PgConn::fairing())
-        .mount("/api/v1/joke", routes![random, random_category, new_joke])
-        .register("/api/v1", rocket::catchers![not_found])
+impl Server for Rocket<Build> {
+    fn launch(self) -> Self {
+        self.manage_db()
+            .mount("/api/v1/joke", rocket::routes![create])
+    }
 }

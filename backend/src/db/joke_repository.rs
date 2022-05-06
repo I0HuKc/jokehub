@@ -1,21 +1,25 @@
-use crate::db::PgConn;
-use crate::model::joke::{Joke, NewJoke};
-use crate::schema::jokes_tb;
+use crate::{
+    db::Conn,
+    model::joke::{Joke, NewJoke},
+    schema::jokes_tb,
+    Error,
+};
+use diesel::RunQueryDsl;
 
-// impl Joke {
-//     pub fn cresate(conn: PgConn, nj: NewJoke) -> Self {
-//         let mut joke = Joke::from(nj);
+pub enum NewJokeOutcome {
+    Ok(Joke),
+    Other(Error),
+}
 
-//         // conn
-//         // .run(move |c| {
-//         //     diesel::insert_into(jokes_tb::table)
-//         //         .values(&joke)
-//         //         .get_result(c)
-//         // });
-
-
-//         // let joke = diesel::insert_into(jokes_tb::table)
-//         //     .values(joke)
-//         //     .get_result::<Joke>(&conn)?;
-//     }
-// }
+pub async fn create(conn: Conn, nj: NewJoke) -> NewJokeOutcome {
+    conn.run(move |c| {
+        match diesel::insert_into(jokes_tb::table)
+            .values(nj)
+            .get_result::<Joke>(c)
+        {
+            Ok(j) => NewJokeOutcome::Ok(j),
+            Err(e) => NewJokeOutcome::Other(Error::from(e)),
+        }
+    })
+    .await
+}
