@@ -1,1 +1,3 @@
 DROP TABLE IF EXISTS jokes_tb;
+
+DROP EXTENSION IF EXISTS "uuid-ossp";
