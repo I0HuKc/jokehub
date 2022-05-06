@@ -1,10 +1,11 @@
+use diesel::RunQueryDsl;
+
 use crate::{
     db::Conn,
     model::joke::{Joke, NewJoke},
     schema::jokes_tb,
     Error,
 };
-use diesel::RunQueryDsl;
 
 pub enum NewJokeOutcome {
     Ok(Joke),

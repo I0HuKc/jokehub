@@ -6,13 +6,16 @@ use crate::{
     Error,
 };
 
+
+mod errors;
+
 pub trait Server {
     fn launch(self) -> Self;
 }
 
-#[rocket::post("/", data = "<nj>")]
+#[post("/", data = "<nj>")]
 async fn create(c: Conn, nj: Json<NewJoke>) -> Result<Created<Json<Joke>>, Json<Error>> {
-    match joke_repository::create(c, NewJoke::from(nj)).await {
+    match joke_repository::create(c, nj.0).await {
         NewJokeOutcome::Ok(j) => Ok(Created::new("/").body(Json(j))),
         NewJokeOutcome::Other(err) => Err(Json(err)),
     }

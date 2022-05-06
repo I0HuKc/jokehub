@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 use diesel::{Insertable, Queryable};
-use rocket::serde::{json::Json, Deserialize, Serialize};
+use rocket::serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::schema::jokes_tb;
@@ -24,10 +24,4 @@ pub struct NewJoke {
     pub language: String,
     pub setup: String,
     pub punchline: Option<String>,
-}
-
-impl From<Json<NewJoke>> for NewJoke {
-    fn from(nj: Json<NewJoke>) -> Self {
-        nj.0
-    }
 }
