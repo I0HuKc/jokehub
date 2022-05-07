@@ -12,18 +12,17 @@ extern crate diesel;
 #[macro_use]
 extern crate rocket;
 
-
 use rocket::serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 pub struct Error {
     pub details: String,
 }
 
 impl Error {
-    pub fn new(err: String) -> Self {
+    pub const fn new(err: String) -> Self {
         Error { details: err }
     }
 }
@@ -38,4 +37,12 @@ impl From<diesel::result::Error> for Error {
     fn from(err: diesel::result::Error) -> Self {
         Error::new(format!("Database error: {}", err))
     }
+}
+
+pub enum Outcome<T> {
+    Ok(T),
+    // NotValid,
+    AlreadyExists(Error),
+    // NotFound,
+    Other(Error),
 }

@@ -1,9 +1,9 @@
+mod errors;
+pub mod joke_repository;
+
 use rocket::{Build, Rocket};
 use rocket_sync_db_pools::database;
-
 use rocket::fairing::AdHoc;
-
-pub mod joke_repository;
 
 pub trait DbInit {
     fn manage_db(self) -> Self;

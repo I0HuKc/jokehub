@@ -1,0 +1,1 @@
+pub const ERR_ALREADY_EXISTS: &str = "Record with these parameters already exists";

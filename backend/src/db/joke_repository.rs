@@ -4,23 +4,26 @@ use crate::{
     db::Conn,
     model::joke::{Joke, NewJoke},
     schema::jokes_tb,
-    Error,
+    Error, Outcome,
 };
 
-pub enum NewJokeOutcome {
-    Ok(Joke),
-    Other(Error),
-}
+use crate::db::errors::ERR_ALREADY_EXISTS;
 
-pub async fn create(conn: Conn, nj: NewJoke) -> NewJokeOutcome {
-    conn.run(move |c| {
-        match diesel::insert_into(jokes_tb::table)
-            .values(nj)
-            .get_result::<Joke>(c)
-        {
-            Ok(j) => NewJokeOutcome::Ok(j),
-            Err(e) => NewJokeOutcome::Other(Error::from(e)),
-        }
-    })
-    .await
+impl Joke {
+    pub async fn create(conn: Conn, nj: NewJoke) -> Outcome<Joke> {
+        conn.run(move |c| {
+            match diesel::insert_into(jokes_tb::table)
+                .values(nj)
+                .get_result::<Joke>(c)
+            {
+                Ok(j) => Outcome::Ok(j),
+                Err(diesel::result::Error::DatabaseError(
+                    diesel::result::DatabaseErrorKind::UniqueViolation,
+                    _,
+                )) => Outcome::AlreadyExists(Error::new(ERR_ALREADY_EXISTS.to_string())),
+                Err(e) => Outcome::Other(Error::from(e)),
+            }
+        })
+        .await
+    }
 }

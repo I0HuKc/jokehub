@@ -1,23 +1,26 @@
-use rocket::{response::status::Created, serde::json::Json, Build, Rocket};
+use rocket::http::Status;
+use rocket::serde::json::Json;
+use rocket::{Build, Rocket};
 
 use crate::{
-    db::{joke_repository, joke_repository::NewJokeOutcome, Conn, DbInit},
+    db::{Conn, DbInit},
     model::joke::{Joke, NewJoke},
-    Error,
+    Outcome,
 };
 
-
-mod errors;
+mod response;
+use response::Response;
 
 pub trait Server {
     fn launch(self) -> Self;
 }
 
 #[post("/", data = "<nj>")]
-async fn create(c: Conn, nj: Json<NewJoke>) -> Result<Created<Json<Joke>>, Json<Error>> {
-    match joke_repository::create(c, nj.0).await {
-        NewJokeOutcome::Ok(j) => Ok(Created::new("/").body(Json(j))),
-        NewJokeOutcome::Other(err) => Err(Json(err)),
+async fn create(c: Conn, nj: Json<NewJoke>) -> Response<'static> {
+    match Joke::create(c, nj.0).await {
+        Outcome::Ok(j) => Response::new(j, Status::Created),
+        Outcome::AlreadyExists(err) => Response::new(err, Status::UnprocessableEntity),
+        Outcome::Other(err) => Response::new(err, Status::InternalServerError),
     }
 }
 

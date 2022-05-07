@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::schema::jokes_tb;
 
-#[derive(Serialize, Queryable, Debug)]
+#[derive(Clone, Serialize, Queryable, Debug)]
 #[serde(crate = "rocket::serde")]
 pub struct Joke {
     pub uuid: Uuid,
