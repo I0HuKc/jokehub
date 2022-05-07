@@ -1,9 +1,11 @@
-mod errors;
+pub mod errors;
 pub mod joke_repository;
 
+use rocket::fairing::AdHoc;
 use rocket::{Build, Rocket};
 use rocket_sync_db_pools::database;
-use rocket::fairing::AdHoc;
+
+use errors::{EX_DB_CONN, EX_DB_MIGRATION};
 
 pub trait DbInit {
     fn manage_db(self) -> Self;
@@ -19,10 +21,10 @@ impl DbInit for Rocket<Build> {
                 Box::pin(async move {
                     embed_migrations!();
 
-                    let conn = Conn::get_one(&r).await.expect("database connection");
+                    let conn = Conn::get_one(&r).await.expect(EX_DB_CONN);
                     conn.run(|c| embedded_migrations::run(c))
                         .await
-                        .expect("diesel migrations");
+                        .expect(EX_DB_MIGRATION);
                 })
             }))
     }

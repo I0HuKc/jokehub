@@ -1,14 +1,14 @@
-use rocket::http::Status;
+mod helper;
+mod response;
+
 use rocket::serde::json::Json;
 use rocket::{Build, Rocket};
 
 use crate::{
     db::{Conn, DbInit},
     model::joke::{Joke, NewJoke},
-    Outcome,
 };
 
-mod response;
 use response::Response;
 
 pub trait Server {
@@ -17,10 +17,10 @@ pub trait Server {
 
 #[post("/", data = "<nj>")]
 async fn create(c: Conn, nj: Json<NewJoke>) -> Response<'static> {
-    match Joke::create(c, nj.0).await {
-        Outcome::Ok(j) => Response::new(j, Status::Created),
-        Outcome::AlreadyExists(err) => Response::new(err, Status::UnprocessableEntity),
-        Outcome::Other(err) => Response::new(err, Status::InternalServerError),
+    let (res, status) = helper::db_answer_handle(Joke::create(c, nj.0).await);
+    match res {
+        Ok(j) => Response::new(j, status),
+        Err(err) => Response::new(err, status),
     }
 }
 
