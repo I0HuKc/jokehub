@@ -6,5 +6,8 @@ CREATE TABLE IF NOT EXISTS jokes_tb(
     language VARCHAR(4) NOT NULL,
     setup TEXT NOT NULL,
     punchline TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT now()
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    UNIQUE (setup, punchline)
 );
+
