@@ -1,5 +1,5 @@
 SHELL = /bin/bash
-CACHE = yes
+CACHE = no
 
 GENERAL_BUILD_ARGS = --release
 BACKEND_BUILD_ARGS = $(GENERAL_BUILD_ARGS) -p jokehub
@@ -10,7 +10,7 @@ DOCKER_DIR = docker
 include .env
 
 define is_need_to_use_cache
-    if [ $(1) = no ]; then\
+    if [ ! $(1) = no ]; then\
 		echo --no-cache ;\
     fi
 endef
@@ -23,7 +23,11 @@ endef
 	down-backend \
 	build-backend \
 	run-backend \
+	count-backend \
 
+
+count-backend:
+	find backend/src -name tests -prune -o -type f -name '*.rs' | xargs wc -l
 
 down-backend:	
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) down \
