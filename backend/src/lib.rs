@@ -38,11 +38,3 @@ impl From<diesel::result::Error> for Error {
         Error::new(format!("Database error: {}", err))
     }
 }
-
-pub enum Outcome<T> {
-    Ok(T),
-    // NotValid,
-    AlreadyExists(Error),
-    // NotFound,
-    Other(Error),
-}
