@@ -1,20 +1,21 @@
 use rocket::serde::json::Json;
 use rocket::{Build, Rocket};
+use validator::Validate;
 
 use crate::{
     db::{Conn, DbInit},
     model::joke::{Joke, NewJoke},
-    Error,
+    Errors,
 };
 
 pub trait Server {
     fn launch(self) -> Self;
 }
 
-#[post("/", data = "<nj>")]
-async fn create(c: Conn, nj: Json<NewJoke>) -> Result<Json<Joke>, Error> {
-    let joke = Joke::create(c, nj.0).await?;
-
+#[post("/", data = "<jnj>")]
+async fn create(c: Conn, jnj: Json<NewJoke>) -> Result<Json<Joke>, Errors> {
+    jnj.0.validate()?;
+    let joke = Joke::create(c, jnj.0).await?;
     Ok(Json(joke))
 }
 

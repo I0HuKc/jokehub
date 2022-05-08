@@ -5,7 +5,7 @@ use rocket::fairing::AdHoc;
 use rocket::{Build, Rocket};
 use rocket_sync_db_pools::database;
 
-use errors::{EX_DB_CONN, EX_DB_MIGRATION};
+use errors::{ERR_DB_CONN, ERR_DB_MIGRATION};
 
 pub trait DbInit {
     fn manage_db(self) -> Self;
@@ -21,10 +21,10 @@ impl DbInit for Rocket<Build> {
                 Box::pin(async move {
                     embed_migrations!();
 
-                    let conn = Conn::get_one(&r).await.expect(EX_DB_CONN);
+                    let conn = Conn::get_one(&r).await.expect(ERR_DB_CONN);
                     conn.run(|c| embedded_migrations::run(c))
                         .await
-                        .expect(EX_DB_MIGRATION);
+                        .expect(ERR_DB_MIGRATION);
                 })
             }))
     }
