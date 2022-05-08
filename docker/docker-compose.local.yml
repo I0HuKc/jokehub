@@ -2,7 +2,7 @@ version: "3.9"
 services:
   jokehub_backend:
     build:
-      dockerfile: docker/Dockerfile.backend
+      dockerfile: docker/backend.Dockerfile
       context: ../
     env_file:
       - ../.env
