@@ -3,6 +3,7 @@ use diesel::{Insertable, Queryable};
 use rocket::serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
+use std::borrow::Cow;
 
 use crate::schema::jokes_tb;
 
@@ -35,5 +36,7 @@ fn validate_language(lang: &str) -> Result<(), ValidationError> {
         }
     }
 
-    return Err(ValidationError::new("Validation: unsupported language"));
+    let mut e = ValidationError::new("language");
+    e.message = Some(Cow::Borrowed("teeeeeest"));
+    return Err(e);
 }

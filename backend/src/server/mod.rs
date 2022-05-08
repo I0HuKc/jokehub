@@ -13,7 +13,7 @@ pub trait Server {
 }
 
 #[post("/", data = "<jnj>")]
-async fn create(c: Conn, jnj: Json<NewJoke>) -> Result<Json<Joke>, Errors> {
+async fn create<'f>(c: Conn, jnj: Json<NewJoke>) -> Result<Json<Joke>, Errors<'f>> {
     jnj.0.validate()?;
     let joke = Joke::create(c, jnj.0).await?;
     Ok(Json(joke))

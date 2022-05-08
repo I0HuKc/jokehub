@@ -7,8 +7,8 @@ use crate::{
     Errors, 
 };
 
-impl Joke {
-    pub async fn create(conn: Conn, nj: NewJoke) -> Result<Joke, Errors> {
+impl<'a> Joke {
+    pub async fn create(conn: Conn, nj: NewJoke) -> Result<Joke, Errors<'a>> {
         let joke = conn
             .run(move |c| {
                 diesel::insert_into(jokes_tb::table)
