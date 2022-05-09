@@ -24,7 +24,11 @@ endef
 	build-backend \
 	run-backend \
 	count-backend \
+	config-backend \
 
+
+config-backend:
+	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) config
 
 count-backend:
 	find backend/src -name tests -prune -o -type f -name '*.rs' | xargs wc -l
