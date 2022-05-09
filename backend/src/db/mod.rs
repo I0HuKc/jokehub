@@ -1,11 +1,9 @@
-pub mod errors;
 pub mod joke_repository;
 
+use lazy_static::lazy_static;
 use rocket::fairing::AdHoc;
 use rocket::{Build, Rocket};
 use rocket_sync_db_pools::database;
-
-use errors::{ERR_DB_CONN, ERR_DB_MIGRATION};
 
 pub trait DbInit {
     fn manage_db(self) -> Self;
@@ -21,11 +19,21 @@ impl DbInit for Rocket<Build> {
                 Box::pin(async move {
                     embed_migrations!();
 
-                    let conn = Conn::get_one(&r).await.expect(ERR_DB_CONN);
+                    let conn = Conn::get_one(&r).await.expect(ERR_DB_CONN.clone());
                     conn.run(|c| embedded_migrations::run(c))
                         .await
-                        .expect(ERR_DB_MIGRATION);
+                        .expect(ERR_DB_MIGRATION.clone());
                 })
             }))
     }
+}
+
+lazy_static! {
+    static ref ERR_DB_CONN: &'static str = "Failed to establish a connection with DB";
+    static ref ERR_DB_MIGRATION: &'static str = "Failed to roll migrations";
+}
+
+lazy_static! {
+    pub static ref ERR_ALREADY_EXISTS: &'static str = "Record with these parameters already exists";
+    pub static ref ERR_NOT_FOUND: &'static str = "Record with such parameters is not found";
 }

@@ -3,9 +3,10 @@ use diesel::{Insertable, Queryable};
 use rocket::serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
-use std::borrow::Cow;
 
 use crate::schema::jokes_tb;
+
+use crate::model::SUPPORTED_LANGUAGES;
 
 #[derive(Clone, Serialize, Queryable, Debug)]
 #[serde(crate = "rocket::serde")]
@@ -23,20 +24,21 @@ pub struct Joke {
 #[table_name = "jokes_tb"]
 pub struct NewJoke {
     pub category: String,
-    #[validate(custom = "validate_language")]
+    #[validate(
+        length(equal = 2, message = "Invalid length"),
+        custom(function = "validate_language", message = "Unknown type")
+    )]
     pub language: String,
     pub setup: String,
     pub punchline: Option<String>,
 }
 
 fn validate_language(lang: &str) -> Result<(), ValidationError> {
-    for l in ["ru", "en"].iter() {
-        if lang == *l {
+    for l in SUPPORTED_LANGUAGES.clone() {
+        if lang == l {
             return Ok(());
         }
     }
 
-    let mut e = ValidationError::new("language");
-    e.message = Some(Cow::Borrowed("teeeeeest"));
-    return Err(e);
+    return Err(ValidationError::new("custom"));
 }
