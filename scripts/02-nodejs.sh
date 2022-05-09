@@ -1,6 +1,6 @@
-#!/bin/bash
+!/bin/bash
 
-# Скрипт автоматизированной утановки NodeJs
+Скрипт автоматизированной утановки NodeJs
 
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
 
