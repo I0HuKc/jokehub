@@ -6,7 +6,7 @@ mongo -- "$MONGO_INITDB_DATABASE" <<EOF
     pwd: "$MONGO_USER_PASSWORD",
     roles: [
         {
-        role: "dbOwner",
+        role: "$MONGO_USER_ROLE",
         db: "$MONGO_INITDB_DATABASE",
         },
     ],
