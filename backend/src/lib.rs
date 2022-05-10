@@ -13,6 +13,7 @@ extern crate diesel;
 extern crate rocket;
 
 use diesel::result::Error as DieselError;
+use mongodb::error::Error as MongoDbError;
 use rocket::http::ContentType;
 use rocket::http::Status;
 use rocket::response::Responder as RocketResponder;
@@ -56,13 +57,29 @@ impl<'a> Errors<'a> {
     }
 }
 
+impl From<MongoDbError> for Errors<'_> {
+    fn from(err: MongoDbError) -> Self {
+        let object: Value = serde_json::from_str(&err.to_string()).unwrap();
+        Errors::new(Status::InternalServerError).add("mdb", json!(object))
+    }
+}
+
+impl From<bson::ser::Error> for Errors<'_> {
+    fn from(err: bson::ser::Error) -> Self {
+        Errors::new(Status::UnprocessableEntity).add("bson", json!(err.to_string()))
+    }
+}
+
 impl From<DieselError> for Errors<'_> {
     fn from(err: DieselError) -> Self {
         match err {
-            DieselError::NotFound => Errors::new(Status::NotFound).add("db", json!(ERR_NOT_FOUND.clone())),
+            DieselError::NotFound => {
+                Errors::new(Status::NotFound).add("db", json!(ERR_NOT_FOUND.clone()))
+            }
 
             DieselError::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _) => {
-                Errors::new(Status::UnprocessableEntity).add("db", json!(ERR_ALREADY_EXISTS.clone()))
+                Errors::new(Status::UnprocessableEntity)
+                    .add("db", json!(ERR_ALREADY_EXISTS.clone()))
             }
 
             _ => Errors::new(Status::InternalServerError).add("db", json!(err.to_string())),
