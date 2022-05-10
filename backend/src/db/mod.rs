@@ -1,3 +1,4 @@
+pub mod mongo;
 pub mod sqlstore;
 
 use std::time::Duration;
@@ -72,13 +73,13 @@ lazy_static! {
 
 lazy_static! {
     static ref ERR_ENV_MONGO_URL: &'static str = "Unable to get MongoDB database url";
-    static ref ERR_ENV_MONGO_DB_NAME: &'static str = "Unable to get MongoDB database name";
     static ref ERR_MONG_CONN: &'static str = "Cannot connect to MongoDB instance";
     static ref ERR_DB_CONN: &'static str = "Failed to establish a connection with DB";
     static ref ERR_DB_MIGRATION: &'static str = "Failed to roll migrations";
 }
 
 lazy_static! {
+    pub static ref ERR_ENV_MONGO_DB_NAME: &'static str = "Unable to get MongoDB database name";
     pub static ref ERR_ALREADY_EXISTS: &'static str = "Record with these parameters already exists";
     pub static ref ERR_NOT_FOUND: &'static str = "Record with such parameters is not found";
 }
