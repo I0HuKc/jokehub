@@ -44,7 +44,6 @@ run-backend: build-backend
 build-backend:
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) build \
 		--build-arg BUILD_ARGS="$(BACKEND_BUILD_ARGS)" \
-		--build-arg DATABASE_URL="$(DATABASE_URL)" \
 		$(shell $(call is_need_to_use_cache, $(CACHE)))
 	
 

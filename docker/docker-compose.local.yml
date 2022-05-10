@@ -3,9 +3,14 @@ services:
   jokehub_backend:
     build:
       dockerfile: docker/backend.Dockerfile
+      args:
+        - DATABASE_URL=$POSTGRES_DATABASE_URL
       context: ../
     env_file:
       - ../.env
+    environment:
+      - MONGO_DB_URL=mongodb://$MONGO_USER:$MONGO_USER_PASSWORD@jokehub_mongodb:27017/$MONGO_INITDB_DATABASE?w=majority
+      - MONGO_DATABASE_NAME=$MONGO_INITDB_DATABASE
     ports:
       - "8000:8000"
     depends_on:
@@ -75,7 +80,7 @@ services:
 volumes:
   mongodb_data:
     driver: local
-    
+
   postgres_data:
     driver: local
 
