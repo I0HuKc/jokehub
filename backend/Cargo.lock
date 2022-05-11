@@ -342,7 +342,8 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "uuid",
+ "serde_with",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -576,7 +577,7 @@ dependencies = [
  "diesel_derives",
  "pq-sys",
  "r2d2",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -1076,7 +1077,7 @@ dependencies = [
  "rocket_sync_db_pools",
  "serde",
  "serde_json",
- "uuid",
+ "uuid 0.8.2",
  "validator",
 ]
 
@@ -1279,7 +1280,7 @@ dependencies = [
  "trust-dns-proto",
  "trust-dns-resolver",
  "typed-builder",
- "uuid",
+ "uuid 0.8.2",
  "webpki-roots",
 ]
 
@@ -1733,6 +1734,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util 0.7.1",
  "ubyte",
+ "uuid 1.0.0",
  "version_check",
  "yansi",
 ]
@@ -1778,6 +1780,7 @@ dependencies = [
  "time 0.3.9",
  "tokio",
  "uncased",
+ "uuid 1.0.0",
 ]
 
 [[package]]
@@ -2494,6 +2497,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 dependencies = [
  "getrandom",
+ "serde",
+]
+
+[[package]]
+name = "uuid"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cfcd319456c4d6ea10087ed423473267e1a071f3bc0aa89f80d60997843c6f0"
+dependencies = [
  "serde",
 ]
 
