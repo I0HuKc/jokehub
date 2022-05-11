@@ -1,7 +1,5 @@
 use chrono::NaiveDateTime;
 use chrono::Utc;
-
-use bson::serde_helpers::uuid_as_binary;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -46,6 +44,28 @@ impl Flags {
             sexist: false,
         }
     }
+
+    // Переключатели
+
+    pub fn religious_coup(&mut self) -> Self {
+        self.religious = !self.religious;
+        return self.clone();
+    }
+
+    pub fn political_coup(&mut self) -> Self {
+        self.political = !self.political;
+        return self.clone();
+    }
+
+    pub fn racist_coup(&mut self) -> Self {
+        self.racist = !self.racist;
+        return self.clone();
+    }
+
+    pub fn sexist_coup(&mut self) -> Self {
+        self.sexist = !self.sexist;
+        return self.clone();
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -69,10 +89,12 @@ impl Tail {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Shrimp<B> {
-    #[serde(with = "uuid_as_binary")]
+pub struct Shrimp<B>
+where
+    B: Serialize,
+{
     #[serde(rename = "_id")]
-    pub id: Uuid,
+    pub id: String,
 
     #[serde(rename = "_header")]
     pub head: Head,
@@ -84,10 +106,13 @@ pub struct Shrimp<B> {
     pub tail: Tail,
 }
 
-impl<B> Shrimp<B> {
+impl<B> Shrimp<B>
+where
+    B: Serialize,
+{
     pub fn new(body: B, tail: Tail) -> Self {
         Shrimp {
-            id: Uuid::new_v4(),
+            id: Uuid::new_v4().to_string(),
             head: Head::new(),
             body,
             tail,

@@ -22,6 +22,7 @@ use rocket::serde::json::Json;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::env::VarError;
 use uuid::Error as UuidError;
 use validator::ValidationErrors;
 
@@ -48,13 +49,20 @@ impl<'a> Errors<'a> {
         }
     }
 
-    pub fn internal_from_error<E>(ch: &'a str, err: E) -> Self
-    where
-        E: ToString,
-    {
-        let err_str = serde_json::to_string(&err.to_string()).unwrap();
-        let object: Value = serde_json::from_str(&err_str).unwrap();
-        Errors::new(Status::InternalServerError).add(ch, json!(object))
+    // Общие быстрые методы
+
+    pub fn internal_from_str(ch: &'a str, err: &'a str) -> Self {
+        Errors::new(Status::InternalServerError).add(ch, json!(err))
+    }
+
+    // Быстрые методы для ответа ошибкой при работе с базами данных
+
+    pub fn alredy_exists(ch: &'a str) -> Self {
+        Errors::new(Status::UnprocessableEntity).add(ch, json!(ERR_ALREADY_EXISTS.clone()))
+    }
+
+    pub fn not_found(ch: &'a str) -> Self {
+        Errors::new(Status::UnprocessableEntity).add(ch, json!(ERR_NOT_FOUND.clone()))
     }
 
     pub fn add(&mut self, ch: &'a str, err: Value) -> Self {
@@ -74,9 +82,26 @@ impl From<UuidError> for Errors<'_> {
     }
 }
 
+impl From<VarError> for Errors<'_> {
+    fn from(err: VarError) -> Self {
+        match err {
+            VarError::NotPresent => Errors::internal_from_str("env", "The specified environment variable was not present in the current process's environment."),
+            VarError::NotUnicode(_) =>  Errors::internal_from_str("env", "The specified environment variable was found, but it did not contain valid unicode data. The found data is returned as a payload of this variant."),
+        }
+    }
+}
+
 impl From<MongoDbError> for Errors<'_> {
     fn from(err: MongoDbError) -> Self {
-        Errors::new(Status::InternalServerError).add("mdb", json!(format!("{:?}", err.kind)))
+        match *err.kind {
+            mongodb::error::ErrorKind::Write(err) => match err {
+                mongodb::error::WriteFailure::WriteError(_) => Errors::alredy_exists("mdb"),
+                _ => todo!(),
+            },
+
+            _ => Errors::new(Status::InternalServerError)
+                .add("mdb", json!(format!("{:?}", err.kind))),
+        }
     }
 }
 
