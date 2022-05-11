@@ -82,4 +82,5 @@ lazy_static! {
     pub static ref ERR_ENV_MONGO_DB_NAME: &'static str = "Unable to get MongoDB database name";
     pub static ref ERR_ALREADY_EXISTS: &'static str = "Record with these parameters already exists";
     pub static ref ERR_NOT_FOUND: &'static str = "Record with such parameters is not found";
+    pub static ref ERR_INTERNAL: &'static str = "An database internal error has occurred";
 }

@@ -1,39 +1,26 @@
 use chrono::NaiveDateTime;
 use chrono::Utc;
-use serde::Serialize;
+
+use bson::serde_helpers::uuid_as_binary;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Head {
-    #[serde(rename(serialize = "_id"))]
-    pub uuid: Uuid,
     pub counter: usize,
-    pub author: String,
     pub timestamp: NaiveDateTime,
 }
 
 impl Head {
-    pub fn new(header_slim: HeadSlim) -> Self {
+    pub fn new() -> Self {
         Head {
-            uuid: Uuid::new_v4(),
             counter: 0,
-            author: header_slim.author,
             timestamp: Utc::now().naive_utc(),
         }
     }
 }
 
-pub struct HeadSlim {
-    pub author: String,
-}
-
-impl HeadSlim {
-    pub fn new(author: String) -> Self {
-        HeadSlim { author }
-    }
-}
-
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Flags {
     pub religious: bool,
     pub political: bool,
@@ -61,35 +48,47 @@ impl Flags {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Tail {
-    flags: Flags,
+    pub flags: Flags,
 
-    #[serde(rename(serialize = "language"))]
+    pub author: String,
+
+    #[serde(rename = "language")]
     pub lang: String,
 }
 
 impl Tail {
-    pub fn new(flags: Flags, lang: String) -> Self {
-        Tail { flags, lang }
+    pub fn new(flags: Flags, lang: String, author: String) -> Self {
+        Tail {
+            flags,
+            lang,
+            author,
+        }
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Shrimp<B> {
-    #[serde(rename(serialize = "_header"))]
+    #[serde(with = "uuid_as_binary")]
+    #[serde(rename = "_id")]
+    pub id: Uuid,
+
+    #[serde(rename = "_header")]
     pub head: Head,
 
+    #[serde(flatten)]
     pub body: B,
 
-    #[serde(rename(serialize = "_meta-data"))]
+    #[serde(rename = "_meta-data")]
     pub tail: Tail,
 }
 
 impl<B> Shrimp<B> {
-    pub fn new(header_slim: HeadSlim, body: B, tail: Tail) -> Self {
+    pub fn new(body: B, tail: Tail) -> Self {
         Shrimp {
-            head: Head::new(header_slim),
+            id: Uuid::new_v4(),
+            head: Head::new(),
             body,
             tail,
         }

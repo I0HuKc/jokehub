@@ -22,6 +22,7 @@ use rocket::serde::json::Json;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use uuid::Error as UuidError;
 use validator::ValidationErrors;
 
 use crate::db::{ERR_ALREADY_EXISTS, ERR_NOT_FOUND};
@@ -47,6 +48,15 @@ impl<'a> Errors<'a> {
         }
     }
 
+    pub fn internal_from_error<E>(ch: &'a str, err: E) -> Self
+    where
+        E: ToString,
+    {
+        let err_str = serde_json::to_string(&err.to_string()).unwrap();
+        let object: Value = serde_json::from_str(&err_str).unwrap();
+        Errors::new(Status::InternalServerError).add(ch, json!(object))
+    }
+
     pub fn add(&mut self, ch: &'a str, err: Value) -> Self {
         self.details
             .entry(ch)
@@ -57,10 +67,16 @@ impl<'a> Errors<'a> {
     }
 }
 
+impl From<UuidError> for Errors<'_> {
+    fn from(err: UuidError) -> Self {
+        let object: Value = serde_json::from_str(&err.to_string()).unwrap();
+        Errors::new(Status::UnprocessableEntity).add("mdb", json!(object))
+    }
+}
+
 impl From<MongoDbError> for Errors<'_> {
     fn from(err: MongoDbError) -> Self {
-        let object: Value = serde_json::from_str(&err.to_string()).unwrap();
-        Errors::new(Status::InternalServerError).add("mdb", json!(object))
+        Errors::new(Status::InternalServerError).add("mdb", json!(format!("{:?}", err.kind)))
     }
 }
 

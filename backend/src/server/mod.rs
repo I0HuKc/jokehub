@@ -1,13 +1,17 @@
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::{Build, Rocket, State};
+use serde_json::json;
 use std::env;
+use std::str::FromStr;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::db::ERR_ENV_MONGO_DB_NAME;
 use crate::model::{
     anecdote::{Anecdote, NewAnecdote},
     joke::{Joke, NewJoke},
-    shrimp::{Flags, HeadSlim, Shrimp, Tail},
+    shrimp::{Flags, Shrimp, Tail},
 };
 use crate::{
     db::{mongo::DB_ANECDOTE, DbInit, PgConn},
@@ -37,10 +41,9 @@ async fn create_anecdote<'f>(
         .database(db_name.as_str())
         .collection(DB_ANECDOTE.clone());
 
-    let hs = HeadSlim::new(String::from("I0HuKc"));
-    let tail = Tail::new(Flags::default(), jna.0.language);
+    let tail = Tail::new(Flags::default(), jna.0.language, String::from("I0HuKc"));
     let body = Anecdote::new(jna.0.tags, jna.0.text);
-    let shrimp: Shrimp<Anecdote> = Shrimp::new(hs, body, tail);
+    let shrimp: Shrimp<Anecdote> = Shrimp::new(body, tail);
 
     let doc = bson::to_document(&shrimp)?;
     collection.insert_one(doc, None)?;
@@ -48,10 +51,27 @@ async fn create_anecdote<'f>(
     Ok(Json(shrimp))
 }
 
+#[get("/anecdote/<id>")]
+async fn get_anecdote<'f>(
+    client: &State<Box<Client>>,
+    id: &str,
+) -> Result<Json<Shrimp<Anecdote>>, Errors<'f>> {
+    let db_name = env::var("MONGO_DATABASE_NAME").expect(ERR_ENV_MONGO_DB_NAME.clone());
+    let collection: Collection<Shrimp<Anecdote>> = client
+        .database(db_name.as_str())
+        .collection(DB_ANECDOTE.clone());
+
+    match collection.find_one(doc! { "_id":  Uuid::from_str(id)?}, None)? {
+        Some(a) => Ok(Json(a)),
+        None => Err(Errors::new(Status::NotFound).add("mdb", json!("record not found"))),
+    }
+}
+
 impl Server for Rocket<Build> {
     fn launch(self) -> Self {
-        self.manage_postgres()
-            .manage_mongodb()
-            .mount("/api/v1", rocket::routes![create_joke, create_anecdote])
+        self.manage_postgres().manage_mongodb().mount(
+            "/v1",
+            rocket::routes![create_joke, create_anecdote, get_anecdote],
+        )
     }
 }

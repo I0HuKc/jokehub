@@ -1,6 +1,6 @@
 use rocket::serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct Anecdote {
     pub tags: Vec<String>,
