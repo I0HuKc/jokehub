@@ -18,8 +18,12 @@ impl Server for Rocket<Build> {
             .manage_postgres()
             .manage_mongodb()
             .mount(
-            "/v1",
-            rocket::routes![create_joke, create_anecdote, get_anecdote],
+                "/v1",
+                rocket::routes![
+                    create_joke, 
+                    create_anecdote, 
+                    get_anecdote,
+                ],
         )
     }
 }
