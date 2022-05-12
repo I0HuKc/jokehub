@@ -8,7 +8,6 @@ use mongodb::{bson::doc, options::ClientOptions, sync::Client};
 use rocket::fairing::AdHoc;
 use rocket::{Build, Rocket};
 use rocket_sync_db_pools::database;
-use std::env;
 
 pub trait DbInit {
     fn manage_postgres(self) -> Self;
@@ -41,14 +40,11 @@ impl DbInit for Rocket<Build> {
 }
 
 fn connect_to_mongodb() -> Option<Client> {
-    let conn_str = env::var("MONGO_DB_URL").expect(ERR_ENV_MONGO_URL.clone());
-    let db_name = env::var("MONGO_DATABASE_NAME").expect(ERR_ENV_MONGO_DB_NAME.clone());
-
-    let mut options = ClientOptions::parse(&conn_str).unwrap();
+    let mut options = ClientOptions::parse(dotenv!("MONGO_DB_URL")).unwrap();
 
     // Параметры соединения
     let duration: Duration = Duration::new(60, 0);
-    options.app_name = Some("Rust Demo".to_string());
+    options.app_name = Some("Stuffy Krill".to_string());
     options.connect_timeout = Some(duration);
 
     // Получение дескриптора кластера
@@ -56,7 +52,7 @@ fn connect_to_mongodb() -> Option<Client> {
     match client {
         Ok(c) => {
             let ping = c
-                .database(db_name.as_str())
+                .database(dotenv!("MONGO_DATABASE_NAME"))
                 .run_command(doc! {"ping": 1}, None)
                 .unwrap();
             println!("{}", ping);

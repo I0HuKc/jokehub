@@ -13,8 +13,8 @@ COPY ./backend/Cargo.toml ./Cargo.toml
 COPY ./backend/Rocket.toml ./Rocket.toml
 COPY ./backend/diesel.toml ./diesel.toml
 
-# Копирую миграции
 COPY ./backend/migrations ./migrations
+COPY ./backend/.env ./.env
 
 # Кэширую зависимости сборки
 RUN cargo build $BUILD_ARGS && \

@@ -14,9 +14,9 @@ mongo -- "$MONGO_INITDB_DATABASE" <<EOF
 EOF
 
 mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDatabase $MONGO_INITDB_DATABASE $MONGO_INITDB_DATABASE <<EOF
-    db.createCollection("$MONGO_ANECDOTE_COLLECTION");
+    db.createCollection("anecdote");
 
-    db.$MONGO_ANECDOTE_COLLECTION.createIndex(
+    db.anecdote.createIndex(
         {
             "text": 1
         }, 

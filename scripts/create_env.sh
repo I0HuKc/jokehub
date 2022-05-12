@@ -2,8 +2,9 @@
 
 source .env
 
+# Создание окружения для docker
 function docker {
-cat << EOF > docker/$1
+cat << EOF > docker/.env
 MONGO_INITDB_ROOT_USERNAME=$MONGO_INITDB_ROOT_USERNAME
 MONGO_INITDB_ROOT_PASSWORD=$MONGO_INITDB_ROOT_PASSWORD
 MONGO_INITDB_DATABASE=$MONGO_INITDB_DATABASE
@@ -20,11 +21,18 @@ POSTGRES_DATABASE_URL=$POSTGRES_DATABASE_URL
 EOF
 }
 
+# Создание окружения для backend
+function backend {
+cat << EOF > backend/.env
+MONGO_DB_URL=mongodb://$MONGO_USER:$MONGO_USER_PASSWORD@jokehub_mongodb:27017/$MONGO_INITDB_DATABASE?w=majority
+MONGO_DATABASE_NAME=$MONGO_INITDB_DATABASE
+EOF
+}
 
-# Создание окружения для docker
-docker .env
+docker
+backend
 
 # Автоматическое обновление .env.example
 if [ $ENV = "local" ]; then\
-    cat .env >> .env.example ;\
+    cat .env > .env.example ;\
 fi

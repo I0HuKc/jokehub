@@ -6,12 +6,9 @@ services:
       args:
         - DATABASE_URL=$POSTGRES_DATABASE_URL
       context: ../
-    env_file:
-      - ../.env
     environment:
       - MONGO_DB_URL=mongodb://$MONGO_USER:$MONGO_USER_PASSWORD@jokehub_mongodb:27017/$MONGO_INITDB_DATABASE?w=majority
       - MONGO_DATABASE_NAME=$MONGO_INITDB_DATABASE
-      - MONGO_ANECDOTE_COLLECTION=$MONGO_ANECDOTE_COLLECTION
     ports:
       - "8000:8000"
     depends_on:
@@ -51,8 +48,6 @@ services:
       - MONGO_USER=$MONGO_USER
       - MONGO_USER_PASSWORD=$MONGO_USER_PASSWORD
       - MONGO_USER_ROLE=$MONGO_USER_ROLE
-
-      - MONGO_ANECDOTE_COLLECTION=$MONGO_ANECDOTE_COLLECTION
     container_name: jokehub_mongodb
     restart: unless-stopped
 

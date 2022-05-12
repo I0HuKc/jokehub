@@ -1,5 +1,8 @@
 backend/target
-backend/Dockerfile
+
+docker/*
+scripts/*
+tools/*
 
 .git
 .github

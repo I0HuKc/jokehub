@@ -43,15 +43,20 @@ down-backend:
 run-backend: build-backend
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) up
 
-build-backend:
+build-backend: env
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) build \
 		--build-arg BUILD_ARGS="$(BACKEND_BUILD_ARGS)" \
 		$(shell $(call is_need_to_use_cache, $(CACHE)))
-	
+
 
 env:
-	sudo chmod +x scripts/create_env.sh
-	scripts/create_env.sh
+	@if [ ! -e .env ]; then\
+		echo .env file was not found && \
+		exit 1 ;\
+	fi
+
+	$(shell sudo chmod +x scripts/create_env.sh)
+	$(shell scripts/create_env.sh)
 
 
 .DEFAULT_GOAL := run-backend

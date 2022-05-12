@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 dotenv = "0.15.0"
+dotenv_codegen = "0.15.0"
 diesel_migrations = "1.4.0"
 bson = { version = "2", features = ["chrono-0_4", "serde_with", "uuid-0_8"] }
 chrono = { version = "0.4", features = ["serde"] }
