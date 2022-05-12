@@ -3,12 +3,13 @@ use rocket::serde::DeserializeOwned;
 use serde::Serialize;
 
 use crate::db::mongo::Crud;
-use crate::{model::shrimp::Shrimp};
+use crate::model::shrimp::{Shrimp, Paws};
 use crate::errors::{Errors, ErrorsKind, ErrorChapter, CH_DATABASE};
 
 impl<'a, T> Crud<'a, Shrimp<T>> for Shrimp<T>
 where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,
+    T: Paws<T>,
 {
     fn create(collection: Collection<Document>, data: Shrimp<T>) -> Result<InsertOneResult, Errors<'a>> {
         let doc = bson::to_document(&data)?;

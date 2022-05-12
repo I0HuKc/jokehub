@@ -1,22 +1,28 @@
-use rocket::serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+
+use crate::model::shrimp::Paws;
 
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
 pub struct Anecdote {
-    pub tags: Vec<String>,
+    pub category: String,
     pub text: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(crate = "rocket::serde")]
+#[derive(Clone, Deserialize, Debug)]
 pub struct NewAnecdote {
+    pub text: String,
+
     pub tags: Vec<String>,
     pub language: String,
-    pub text: String,
 }
 
 impl Anecdote {
-    pub fn new(tags: Vec<String>, text: String) -> Self {
-        Anecdote { tags, text }
+    pub fn new(na: &NewAnecdote) -> Self {
+        Anecdote {
+            text: na.text.to_string(),
+            category: String::from("anecdote"),
+        }
     }
 }
+
+impl Paws<Anecdote> for Anecdote {}

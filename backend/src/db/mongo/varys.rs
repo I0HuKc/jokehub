@@ -1,4 +1,3 @@
-use crate::errors::Errors;
 use mongodb::sync::{Client, Collection};
 use rocket::State;
 
@@ -6,20 +5,20 @@ use rocket::State;
 pub enum Varys {
     Anecdote,
     // Joke,
-    // Punch,
+    Punch,
     // Story,
 }
 
 impl Varys {
-    pub fn get<'a, T>(client: &State<Box<Client>>, v: Varys) -> Result<Collection<T>, Errors<'a>> {
+    pub fn get<'a, T>(client: &State<Box<Client>>, v: Varys) -> Collection<T> {
         match v {
-            Varys::Anecdote => {
-                let collection = client
-                    .database(dotenv!("MONGO_DATABASE_NAME"))
-                    .collection("anecdote");
+            Varys::Anecdote => client
+                .database(dotenv!("MONGO_DATABASE_NAME"))
+                .collection("anecdote"),
 
-                Ok(collection)
-            }
+            Varys::Punch => client
+                .database(dotenv!("MONGO_DATABASE_NAME"))
+                .collection("punch"),
         }
     }
 }

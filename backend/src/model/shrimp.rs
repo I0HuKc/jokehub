@@ -74,16 +74,19 @@ pub struct Tail {
 
     pub author: String,
 
+    pub tags: Vec<String>,
+
     #[serde(rename = "language")]
     pub lang: String,
 }
 
 impl Tail {
-    pub fn new(flags: Flags, lang: String, author: String) -> Self {
+    pub fn new(flags: Flags, lang: &String, author: String, tags: &Vec<String>) -> Self {
         Tail {
             flags,
-            lang,
+            lang: lang.to_string(),
             author,
+            tags: tags.to_vec(),
         }
     }
 }
@@ -106,9 +109,12 @@ where
     pub tail: Tail,
 }
 
+pub trait Paws<B> {}
+
 impl<B> Shrimp<B>
 where
     B: Serialize,
+    B: Paws<B>,
 {
     pub fn new(body: B, tail: Tail) -> Self {
         Shrimp {
