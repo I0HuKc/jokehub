@@ -4,7 +4,7 @@ use validator::Validate;
 use crate::model::joke::{Joke, NewJoke};
 use crate::{
     db:: PgConn,
-    Errors,
+    errors::Errors,
 };
 
 

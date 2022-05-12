@@ -4,7 +4,7 @@ use crate::{
     db::PgConn,
     model::joke::{Joke, NewJoke},
     schema::jokes_tb,
-    Errors, 
+    errors::Errors, 
 };
 
 impl<'a> Joke {

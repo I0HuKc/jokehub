@@ -8,11 +8,9 @@ use crate::model::{
     shrimp::{Flags, Shrimp, Tail},
 };
 use crate::{
-    db::mongo::{Varys, Crud},
-    Errors,
+    db::mongo::{varys::Varys, Crud},
+    errors::Errors,
 };
-
-
 
 #[post("/anecdote/new", data = "<jna>")]
 pub async fn create_anecdote<'f>(client: &State<Box<Client>>, jna: Json<NewAnecdote>) -> Result<Value, Errors<'f>> {

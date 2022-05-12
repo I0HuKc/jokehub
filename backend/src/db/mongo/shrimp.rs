@@ -3,7 +3,8 @@ use rocket::serde::DeserializeOwned;
 use serde::Serialize;
 
 use crate::db::mongo::Crud;
-use crate::{model::shrimp::Shrimp, Errors};
+use crate::{model::shrimp::Shrimp};
+use crate::errors::{Errors, ErrorsKind, ErrorChapter, CH_DATABASE};
 
 impl<'a, T> Crud<'a, Shrimp<T>> for Shrimp<T>
 where
@@ -19,7 +20,11 @@ where
     fn get_by_id(collection: Collection<Shrimp<T>>, id: &str) -> Result<Shrimp<T>, Errors<'a>> {
         match collection.find_one(doc! { "_id":  id}, None)? {
             Some(value) => Ok(value),
-            None => Err(Errors::not_found("anecdote")),
+            None => {
+                let kind = ErrorsKind::NotFound(ErrorChapter(CH_DATABASE.clone()));
+                
+                Err(Errors::new(kind))
+            },
         }
     }
 }
