@@ -26,6 +26,8 @@ endef
 	count-backend \
 	config-backend \
 
+	env \
+
 
 config-backend:
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) config
@@ -46,5 +48,10 @@ build-backend:
 		--build-arg BUILD_ARGS="$(BACKEND_BUILD_ARGS)" \
 		$(shell $(call is_need_to_use_cache, $(CACHE)))
 	
+
+env:
+	sudo chmod +x scripts/create_env.sh
+	scripts/create_env.sh
+
 
 .DEFAULT_GOAL := run-backend
