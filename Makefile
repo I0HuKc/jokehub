@@ -32,12 +32,14 @@ define base_docker_cmd
 	echo docker-compose -f $(1)/docker-compose.$(2).yml
 endef
 
+
 .PHONY: \
 	down-backend \
 	build-backend \
 	run-backend \
 	count-backend \
 	config-backend \
+	test-backend \
 
 	env \
 
@@ -46,8 +48,10 @@ endef
 config-backend:
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) config
 
+
 count-backend:
 	find backend/src -name tests -prune -o -type f -name '*.rs' | xargs wc -l
+
 
 # Удалить все volumes и сети созданые этим проектом
 down-backend:	
@@ -55,9 +59,42 @@ down-backend:
 		--volumes \
 		--remove-orphans
 
+test-backend:
+#	Проверяю наличие файла
+	@if [ ! -e .env.test ]; then\
+		echo .env.test file was not found && \
+		exit 1 ;\
+	fi
+
+#	Проверяю права файла
+	@if [  ! $(shell stat -c %A scripts/create_test_env.sh) = -rwxrwxr-x ]; then\
+		sudo chmod +x scripts/create_test_env.sh ;\
+	fi
+
+#	Запускаю создание переменных тестового окружения
+	scripts/create_test_env.sh
+
+#	Запускаю необходимые службы
+	$(shell $(call base_docker_cmd, $(DOCKER_DIR),test)) up -d
+
+#	Запускаю тесты
+	cd backend && cargo test
+
+#	Останавливаю контейнеры всех запущенных служб
+	docker stop jokehub_mongodb_test
+
+#	Удалаю все что создали контейнеры тестовых служб
+	$(shell $(call base_docker_cmd, $(DOCKER_DIR),test)) down \
+		--volumes \
+		--remove-orphans
+
+#	Возвращаю назад текущие перепенные окружения
+	scripts/create_env.sh
+
 # Запуск сервера
 run-backend: build-backend
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) up
+
 
 # Компиляция сервера
 build-backend: env
@@ -66,25 +103,19 @@ build-backend: env
 		$(shell $(call is_need_to_use_cache, $(CACHE)))
 
 
-# Автоматизированная работа с .env файлами
-#
-# Команда автоматически создает файлы окружения по нужным каталогам 
-# и распихивает по ним нужные данные указанные в глобаьном .env файле.
-# Команду нужно выполнять после обновления .env. При выполнении 
-# команды обновляется .env.example, но только если глобальное окружение
-# (переменная ENV) содержит значение local.
 env:
-# 	Проверяю наличие .env
+#	Проверяю наличие файла
 	@if [ ! -e .env ]; then\
 		echo .env file was not found && \
 		exit 1 ;\
 	fi
 
-#	Проверяю что скрипт инициализации файлов окружения наделен соответствующими правами
+#	Проверяю права файла
 	@if [  ! $(shell stat -c %A scripts/create_env.sh) = -rwxrwxr-x ]; then\
 		sudo chmod +x scripts/create_env.sh ;\
 	fi
 	
+#	Запускаю создание переменных окружения
 	$(shell scripts/create_env.sh)
 
 
