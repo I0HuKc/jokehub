@@ -3,8 +3,6 @@ services:
   jokehub_backend:
     build:
       dockerfile: docker/backend.Dockerfile
-      args:
-        - DATABASE_URL=$POSTGRES_DATABASE_URL
       context: ../
     environment:
       - MONGO_DB_URL=mongodb://$MONGO_USER:$MONGO_USER_PASSWORD@jokehub_mongodb:27017/$MONGO_INITDB_DATABASE?w=majority
@@ -12,8 +10,6 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      jokehub_postgres:
-        condition: service_healthy
       jokehub_mongodb:
         condition: service_healthy
     container_name: jokehub_backend
@@ -51,36 +47,8 @@ services:
     container_name: jokehub_mongodb
     restart: unless-stopped
 
-  jokehub_postgres:
-    image: postgres:14.1-alpine
-    healthcheck:
-      test: ["CMD", "pg_isready", "-q", "-d", "postgres", "-U", "root"]
-      timeout: 10s
-      interval: 1s
-      retries: 3
-    environment:
-      - POSTGRES_USER=$POSTGRES_USER
-      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-      - APP_DB_USER=$POSTGRES_DB_USER
-      - APP_DB_PASS=$POSTGRES_DB_PASSWORD
-      - APP_DB_NAME=$POSTGRES_DB
-    logging:
-      options:
-        max-size: 10m
-        max-file: "3"
-    ports:
-      - "5432:5432"
-    volumes:
-      - ../tools/postgresql_init.sh:/docker-entrypoint-initdb.d/postgresql_init.sh
-      - postgres_data:/var/lib/postgresql/data
-    container_name: jokehub_postgres
-    restart: unless-stopped
-
 volumes:
   mongodb_data:
-    driver: local
-
-  postgres_data:
     driver: local
 
 networks:
