@@ -1096,6 +1096,7 @@ dependencies = [
  "dotenv_codegen",
  "lazy_static",
  "mongodb",
+ "once_cell",
  "r2d2",
  "rocket",
  "rocket_sync_db_pools",

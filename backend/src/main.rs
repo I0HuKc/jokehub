@@ -1,10 +1,12 @@
 use dotenv::dotenv;
 
-use jokehub::server::Server;
+use jokehub::server::rocket;
 
-#[rocket::launch]
-fn rocket() -> _ {
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
     dotenv().ok();
 
-    Server::launch(rocket::build())
+    let _server = rocket().launch().await?;
+
+    Ok(())
 }

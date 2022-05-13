@@ -1,22 +1,22 @@
-use diesel::RunQueryDsl;
+// use diesel::RunQueryDsl;
 
-use crate::{
-    db::PgConn,
-    model::joke::{Joke, NewJoke},
-    schema::jokes_tb,
-    errors::Errors, 
-};
+// use crate::{
+//     // db::PgConn,
+//     model::joke::{Joke, NewJoke},
+//     schema::jokes_tb,
+//     errors::Errors, 
+// };
 
-impl<'a> Joke {
-    pub async fn create(conn: PgConn, nj: NewJoke) -> Result<Joke, Errors<'a>> {
-        let joke = conn
-            .run(move |c| {
-                diesel::insert_into(jokes_tb::table)
-                    .values(nj)
-                    .get_result::<Joke>(c)
-            })
-            .await?;
+// impl<'a> Joke {
+//     pub async fn create(conn: PgConn, nj: NewJoke) -> Result<Joke, Errors<'a>> {
+//         let joke = conn
+//             .run(move |c| {
+//                 diesel::insert_into(jokes_tb::table)
+//                     .values(nj)
+//                     .get_result::<Joke>(c)
+//             })
+//             .await?;
 
-        Ok(joke)
-    }
-}
+//         Ok(joke)
+//     }
+// }

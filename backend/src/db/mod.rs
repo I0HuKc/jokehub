@@ -5,33 +5,15 @@ use std::time::Duration;
 
 use lazy_static::lazy_static;
 use mongodb::{bson::doc, options::ClientOptions, sync::Client};
-use rocket::fairing::AdHoc;
 use rocket::{Build, Rocket};
-use rocket_sync_db_pools::database;
+
 
 pub trait DbInit {
-    fn manage_postgres(self) -> Self;
     fn manage_mongodb(self) -> Self;
 }
 
-#[database("jokehub_db")]
-pub struct PgConn(diesel::PgConnection);
 
 impl DbInit for Rocket<Build> {
-    fn manage_postgres(self) -> Self {
-        self.attach(PgConn::fairing())
-            .attach(AdHoc::on_liftoff(INFO_PG_CONN.clone(), |r| {
-                Box::pin(async move {
-                    embed_migrations!();
-
-                    let conn = PgConn::get_one(&r).await.expect(ERR_DB_CONN.clone());
-                    conn.run(|c| embedded_migrations::run(c))
-                        .await
-                        .expect(ERR_DB_MIGRATION.clone());
-                })
-            }))
-    }
-
     fn manage_mongodb(self) -> Self {
         let client = connect_to_mongodb().unwrap();
         let mbox = Box::new(client);

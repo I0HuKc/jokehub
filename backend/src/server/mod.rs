@@ -1,36 +1,63 @@
 mod anecdote_handler;
 mod joke_handler;
+pub mod ping_handler;
 mod punch_handlers;
 
-use rocket::{Build, Rocket};
+pub mod config;
+
+use rocket::serde::json::{json, Value};
 
 use crate::db::DbInit;
 
 use anecdote_handler::*;
-use joke_handler::*;
+// use joke_handler::*;
+use ping_handler::*;
 use punch_handlers::*;
 
+#[cfg(test)]
+mod tests;
 
-pub trait Server {
-    fn launch(self) -> Self;
+#[launch]
+pub fn rocket() -> _ {
+    rocket::custom(config::from_env())
+        .manage_mongodb()
+        .mount("/", rocket::routes![ping])
+        .mount(
+            "/v1",
+            rocket::routes![
+                // create_joke,
+                create_anecdote,
+                get_anecdote,
+                create_punch,
+                get_punch,
+            ],
+        )
+        .register("/", catchers![not_found])
 }
 
-impl Server for Rocket<Build> {
-    fn launch(self) -> Self {
-        self
-            .manage_postgres()
-            .manage_mongodb()
-            .mount(
-                "/v1",
-                rocket::routes![
-                    create_joke, 
+// impl Server {
+//     fn new() -> Rocket<Build> {
+//         rocket::custom(config::from_env())
+//             .manage_mongodb()
+//             .mount("/", rocket::routes![ping])
+//             .mount(
+//                 "/v1",
+//                 rocket::routes![
+//                     // create_joke,
+//                     create_anecdote,
+//                     get_anecdote,
+//                     create_punch,
+//                     get_punch,
+//                 ],
+//             )
+//             .register("/", catchers![not_found])
+//     }
+// }
 
-                    create_anecdote, 
-                    get_anecdote,
-
-                    create_punch,
-                    get_punch,
-                ],
-        )
-    }
+#[catch(404)]
+fn not_found() -> Value {
+    json!({
+        "status": "error",
+        "reason": "Resource was not found."
+    })
 }

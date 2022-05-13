@@ -5,7 +5,6 @@ use crate::model::shrimp::Paws;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Punch {
     pub category: String,
-
     pub setup: String,
     pub punchline: String,
 }
