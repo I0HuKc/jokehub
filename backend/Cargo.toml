@@ -20,6 +20,7 @@ rand = "0.8.4"
 hmac = { version = "0.12", features = ["reset"] }
 sha2 = "0.10"
 jsonwebtoken = "7.2.0"
+r2d2_redis = "0.14.0"
 
 
 [dependencies.mongodb]

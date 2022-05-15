@@ -1,6 +1,8 @@
 pub mod mongo;
 pub mod sqlstore;
 
+mod redis_connection;
+
 use std::time::Duration;
 
 use lazy_static::lazy_static;
