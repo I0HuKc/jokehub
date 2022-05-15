@@ -3,8 +3,8 @@ use rocket::serde::DeserializeOwned;
 use serde::Serialize;
 
 use crate::db::mongo::Crud;
-use crate::model::shrimp::{Shrimp, Paws};
-use crate::errors::{Errors, ErrorsKind, ErrorChapter, CH_DATABASE};
+use crate::errors::{ErrorChapter, Errors, ErrorsKind, CH_DATABASE};
+use crate::model::shrimp::{Paws, Shrimp};
 
 impl<'a, T> Crud<'a, Shrimp<T>> for Shrimp<T>
 where

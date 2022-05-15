@@ -1,15 +1,5 @@
-mod ping_handler;
+mod ping_handler_test;
+mod punch_handler_test;
 
-use once_cell::sync::OnceCell;
-use rocket::local::blocking::Client;
-use std::sync::Mutex;
+pub(crate) mod common;
 
-use crate::server;
-
-pub(crate) fn test_client() -> &'static Mutex<Client> {
-    static INSTANCE: OnceCell<Mutex<Client>> = OnceCell::new();
-    INSTANCE.get_or_init(|| {
-        let server = server::rocket();
-        Mutex::from(Client::tracked(server).expect("valid rocket instance"))
-    })
-}

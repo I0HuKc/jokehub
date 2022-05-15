@@ -2,6 +2,7 @@ use chrono::NaiveDateTime;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::ValidationError;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Head {
@@ -78,6 +79,20 @@ pub struct Tail {
 
     #[serde(rename = "language")]
     pub lang: String,
+}
+
+pub(crate) fn default_tags() -> Vec<String> {
+    return vec![String::from("general")];
+}
+
+pub(crate) fn validate_lang(lang: &str) -> Result<(), ValidationError> {
+    for l in super::SUPPORTED_LANGUAGES.clone() {
+        if lang == l {
+            return Ok(());
+        }
+    }
+
+    return Err(ValidationError::new("custom"));
 }
 
 impl Tail {

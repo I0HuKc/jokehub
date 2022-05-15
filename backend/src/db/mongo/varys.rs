@@ -3,6 +3,8 @@ use rocket::State;
 
 // Заведующий всеми коллекциями
 pub enum Varys {
+    Users,
+
     Anecdote,
     // Joke,
     Punch,
@@ -19,6 +21,10 @@ impl Varys {
             Varys::Punch => client
                 .database(dotenv!("MONGO_DATABASE_NAME"))
                 .collection("punch"),
+
+            Varys::Users => client
+                .database(dotenv!("MONGO_DATABASE_NAME"))
+                .collection("users"),
         }
     }
 }

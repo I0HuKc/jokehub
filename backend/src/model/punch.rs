@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::shrimp::Paws;
+use crate::model::shrimp::{default_tags, validate_lang, Paws};
+use validator::Validate;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Punch {
@@ -9,12 +10,18 @@ pub struct Punch {
     pub punchline: String,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Validate, Debug)]
 pub struct NewPunch {
     pub setup: String,
     pub punchline: String,
 
+    #[serde(default = "default_tags")]
     pub tags: Vec<String>,
+
+    #[validate(
+        length(equal = 2, message = "Invalid length"),
+        custom(function = "validate_lang", message = "Unknown type")
+    )]
     pub language: String,
 }
 

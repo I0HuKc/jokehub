@@ -5,7 +5,6 @@ use std::env::VarError;
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use diesel::result::Error as DieselError;
 use mongodb::error::Error as MongoDbError;
 use validator::ValidationErrors;
 
@@ -16,12 +15,12 @@ use rocket::response::Response as RocketResponse;
 use rocket::serde::json::Json;
 
 // Раздел ошибки
-#[derive(Clone, Serialize, Hash, PartialEq, Eq)]
+#[derive(Clone, Serialize, Hash, PartialEq, Eq, Debug)]
 pub struct ErrorChapter<'a>(pub &'a str);
 
 // Ошибка
 // Каждая ошибка принадлежит определенному разделу
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 pub struct Error<'a>(ErrorChapter<'a>, Value);
 
 impl<'a> Error<'a> {
@@ -173,26 +172,6 @@ impl From<bson::ser::Error> for Errors<'_> {
     }
 }
 
-impl From<DieselError> for Errors<'_> {
-    fn from(err: DieselError) -> Self {
-        match err {
-            DieselError::NotFound => {
-                Errors::new(ErrorsKind::NotFound(ErrorChapter(CH_DATABASE.clone())))
-            }
-
-            DieselError::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _) => {
-                let err = Error::new(CH_DATABASE.clone(), json!(ERR_ALREADY_EXISTS.clone()));
-                Errors::new(ErrorsKind::Unprocessable(err))
-            }
-
-            _ => {
-                let err = Error::new(CH_DATABASE.clone(), json!(format!("{:?}", err)));
-                Errors::new(ErrorsKind::Internal(err))
-            }
-        }
-    }
-}
-
 impl From<ValidationErrors> for Errors<'_> {
     fn from(v_errs: ValidationErrors) -> Self {
         let mut errs = Errors::create(Status::UnprocessableEntity);
@@ -206,6 +185,7 @@ impl From<ValidationErrors> for Errors<'_> {
         return errs;
     }
 }
+
 
 // Базовые разделы ошибок
 lazy_static! {
@@ -222,7 +202,7 @@ lazy_static! {
 // Базовые ошибки БД
 lazy_static! {
     pub static ref ERR_ALREADY_EXISTS: &'static str = "Record with these parameters already exists";
-    pub static ref ERR_NOT_FOUND: &'static str = "Resource with such parameters is not found";
+    pub static ref ERR_NOT_FOUND: &'static str = "Resource was not found";
 }
 
 // Ошибки env раздела

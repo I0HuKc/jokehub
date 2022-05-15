@@ -9,7 +9,7 @@ use rocket::{Build, Rocket};
 
 
 pub trait DbInit {
-    fn manage_mongodb(self) -> Self;
+    fn manage_mongodb(self) -> Self;   
 }
 
 

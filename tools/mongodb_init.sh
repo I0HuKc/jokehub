@@ -16,6 +16,21 @@ EOF
 
 # Создание коллекций и установка индексов
 mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDatabase $MONGO_INITDB_DATABASE $MONGO_INITDB_DATABASE <<EOF
+    db.createCollection("users");
+    db.users.createIndex(
+        {
+            "username": 1
+        }, 
+        {
+            "unique": true, 
+            "partialFilterExpression": {
+                "username": {
+                    \$type: "string"
+                }
+            }
+        }
+    );
+
     db.createCollection("anecdote");
     db.anecdote.createIndex(
         {

@@ -1,9 +1,9 @@
+mod account_handlers;
 mod anecdote_handler;
+mod config;
 mod joke_handler;
-pub mod ping_handler;
-mod punch_handlers;
-
-pub mod config;
+mod ping_handler;
+mod punch_handler;
 
 use rocket::serde::json::{json, Value};
 
@@ -11,8 +11,9 @@ use crate::db::DbInit;
 
 use anecdote_handler::*;
 // use joke_handler::*;
+use account_handlers::*;
 use ping_handler::*;
-use punch_handlers::*;
+use punch_handler::*;
 
 #[cfg(test)]
 mod tests;
@@ -30,29 +31,13 @@ pub fn rocket() -> _ {
                 get_anecdote,
                 create_punch,
                 get_punch,
+                registration,
+                get_user,
+                login
             ],
         )
         .register("/", catchers![not_found])
 }
-
-// impl Server {
-//     fn new() -> Rocket<Build> {
-//         rocket::custom(config::from_env())
-//             .manage_mongodb()
-//             .mount("/", rocket::routes![ping])
-//             .mount(
-//                 "/v1",
-//                 rocket::routes![
-//                     // create_joke,
-//                     create_anecdote,
-//                     get_anecdote,
-//                     create_punch,
-//                     get_punch,
-//                 ],
-//             )
-//             .register("/", catchers![not_found])
-//     }
-// }
 
 #[catch(404)]
 fn not_found() -> Value {
