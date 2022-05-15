@@ -12,6 +12,8 @@ services:
     depends_on:
       jokehub_mongodb:
         condition: service_healthy
+      jokehub_redis:
+        condition: service_healthy
     container_name: jokehub_backend
     restart: unless-stopped
 
@@ -47,7 +49,30 @@ services:
     container_name: jokehub_mongodb
     restart: unless-stopped
 
+  jokehub_redis:
+    image: redis:6-alpine
+    ports:
+      - "127.0.0.1:35006:6379"
+    healthcheck:
+      test: [
+        "CMD", 
+        "redis-cli", 
+        "--raw", 
+        "incr", 
+        "ping"
+      ]
+      interval: 1s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - redis_data:/var/lib/redis
+    container_name: jokehub_redis
+    restart: unless-stopped
+
 volumes:
+  redis_data:
+    driver: local
+
   mongodb_data:
     driver: local
 
