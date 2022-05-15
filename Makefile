@@ -50,7 +50,7 @@ config-backend:
 
 
 count-backend:
-	find backend/src -name tests -prune -o -type f -name '*.rs' | xargs wc -l
+	find backend/src -name jokehub -prune -o -type f -name '*.rs' | xargs wc -l
 
 
 # Удалить все volumes и сети созданые этим проектом
@@ -78,9 +78,9 @@ test-backend:
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),test)) up -d
 
 #	Запускаю тесты
-	cd backend && cargo test
+	scripts/run_tests.sh	
 
-#	Останавливаю контейнеры всех запущенных служб
+#	Останавливаю контейнеры всех запущенных тестовых служб
 	docker stop jokehub_mongodb_test
 
 #	Удалаю все что создали контейнеры тестовых служб
