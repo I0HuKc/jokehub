@@ -9,7 +9,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use super::validate_query;
-use crate::errors::{Error, Errors, ErrorsKind};
+use crate::errors::HubError;
 
 lazy_static! {
     static ref ROLE_USER: &'static str = "user";
@@ -38,20 +38,12 @@ pub struct User {
 
     pub username: String,
     pub role: String,
-
-    // #[serde(skip_deserializing, skip_serializing_if = "hash_skip")]
+    
     pub hash: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
 
-fn hash_skip(h: &str) -> bool {
-    if h.len() > 0 {
-        return false;
-    } else {
-        return true;
-    }
-}
 
 impl From<NewUser> for User {
     fn from(nu: NewUser) -> Self {
@@ -68,21 +60,19 @@ impl From<NewUser> for User {
 
 impl<'a> User {
     // Верификация пароля
-    pub fn password_verify(&self, password: &[u8]) -> Result<bool, Errors<'a>> {
+    pub fn password_verify(&self, password: &[u8]) -> Result<bool, HubError> {
         argon2::verify_encoded(&self.hash, password).map_err(|err| {
-            let error = Error::new("server", json!(format!("Failed verify password: {}", err)));
-            Errors::new(ErrorsKind::Internal(error))
+            HubError::new_internal("Failed verify password", Some(Vec::new())).add(format!("{}", err))
         })
     }
 
     // Создание хеша пароля
-    pub fn password_hashing(&mut self) -> Result<User, Errors<'a>> {
+    pub fn password_hashing(&mut self) -> Result<User, HubError> {
         let salt: [u8; 32] = rand::thread_rng().gen();
         let config = Config::default();
 
         self.hash = argon2::hash_encoded(self.hash.as_bytes(), &salt, &config).map_err(|err| {
-            let error = Error::new("uuid", json!(format!("Failed create hash: {}", err)));
-            Errors::new(ErrorsKind::Internal(error))
+            HubError::new_internal("Failed create password hash", Some(Vec::new())).add(format!("{}", err))
         })?;
 
         Ok(self.clone())
@@ -105,7 +95,7 @@ pub mod security {
     use rocket::http::Status;
     use serde::{Deserialize, Serialize};
 
-    use crate::errors::{Error, Errors, ErrorsKind};
+    use crate::errors::HubError;
 
     use chrono::prelude::*;
 
@@ -221,7 +211,7 @@ pub mod security {
     }
 
     impl<'a> Tokens {
-        pub fn new(username: String, role: String) -> Result<Tokens, Errors<'a>> {      
+        pub fn new(username: String, role: String) -> Result<Tokens, HubError> {      
             let access_claims = AccessClaims::new(username, role);    
             let refresh_claims = RefreshClaims::new(&access_claims);
 
@@ -233,28 +223,26 @@ pub mod security {
             Ok(tokens)
         }
 
-        fn encode_access_token(ac: &AccessClaims) -> Result<String, Errors<'a>> {
+        fn encode_access_token(ac: &AccessClaims) -> Result<String, HubError> {
             jsonwebtoken::encode(
                 &jsonwebtoken::Header::default(),
                 ac,
                 &EncodingKey::from_secret(SECRET.as_ref()),
             )
             .map_err(|err| {
-                let error = Error::new("server",json!(format!("Failed to create access token: {}", err)));
-                Errors::new(ErrorsKind::Internal(error))
+                HubError::new_internal("Failed to create access token", Some(Vec::new())).add(format!("{}", err))
             })
         }
 
 
-        fn encode_refresh_token(rc: &RefreshClaims) -> Result<String, Errors<'a>> {
+        fn encode_refresh_token(rc: &RefreshClaims) -> Result<String, HubError> {
             jsonwebtoken::encode(
                 &jsonwebtoken::Header::default(),
                 rc,
                 &EncodingKey::from_secret(SECRET.as_ref()),
             )
             .map_err(|err| {
-                let error = Error::new("server", json!(format!("Failed to create access token: {}", err)));
-                Errors::new(ErrorsKind::Internal(error))
+                HubError::new_internal("Failed to create refresh token", Some(Vec::new())).add(format!("{}", err))
             })
         }
 

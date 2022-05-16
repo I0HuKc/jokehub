@@ -7,7 +7,7 @@ mod punch_handler;
 
 use rocket::serde::json::{json, Value};
 
-use crate::db::DbInit;
+use crate::db::DbManage;
 
 use anecdote_handler::*;
 // use joke_handler::*;
@@ -22,6 +22,7 @@ mod tests;
 pub fn rocket() -> _ {
     rocket::custom(config::from_env())
         .manage_mongodb()
+        .manage_redis()
         .mount("/", rocket::routes![ping])
         .mount(
             "/v1",

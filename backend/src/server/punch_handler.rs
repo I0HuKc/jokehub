@@ -1,12 +1,12 @@
-use mongodb::{bson::doc, sync::Client};
+use mongodb::bson::doc;
 use rocket::serde::json::Json;
-use rocket::State;
 use serde_json::{json, Value};
 use validator::Validate;
 
 use crate::{
+    db::mongo::MongoConn,
     db::mongo::{varys::Varys, Crud},
-    errors::Errors,
+    errors::HubError,
 };
 use crate::{
     model::{
@@ -17,7 +17,7 @@ use crate::{
 };
 
 #[post("/punch/new", data = "<jnp>")]
-pub async fn create_punch<'f>(client: &State<Box<Client>>, jnp: Json<NewPunch>) -> Result<Value, Errors<'f>> {
+pub async fn create_punch<'f>(client: MongoConn<'f>, jnp: Json<NewPunch>) -> Result<Value, HubError> {
     jnp.0.validate()?;
     
     let tail = Tail::new(
@@ -29,7 +29,7 @@ pub async fn create_punch<'f>(client: &State<Box<Client>>, jnp: Json<NewPunch>) 
     let body = Punch::new(&jnp);
 
     let result = Shrimp::create(
-        Varys::get(client, Varys::Punch),
+        Varys::get(client.0, Varys::Punch),
         Shrimp::new(body, tail),
     )?;
 
@@ -38,11 +38,11 @@ pub async fn create_punch<'f>(client: &State<Box<Client>>, jnp: Json<NewPunch>) 
 }
 
 #[get("/punch/<id>")]
-pub async fn get_punch<'f>(client: &State<Box<Client>>, id: &str) -> Result<Json<Shrimp<Punch>>, Errors<'f>> {    
+pub async fn get_punch<'f>(client: MongoConn<'f>, id: &str) -> Result<Json<Shrimp<Punch>>, HubError> {    
     uuid_validation(id)?;
 
     let result: Shrimp<Punch> = Shrimp::get_by_id(
-        Varys::get(client, Varys::Punch), 
+        Varys::get(client.0, Varys::Punch), 
         id,
     )?;
 

@@ -7,22 +7,18 @@ pub mod shrimp;
 use lazy_static::lazy_static;
 use regex::Regex;
 use uuid::Uuid;
-
-use crate::errors::{Error, Errors, ErrorsKind};
-use serde_json::json;
 use validator::ValidationError;
+
+use crate::errors::HubError;
 
 lazy_static! {
     pub(crate) static ref SUPPORTED_LANGUAGES: Vec<&'static str> = ["ru", "en"].to_vec();
 }
 
-pub fn uuid_validation<'a>(id: &str) -> Result<(), Errors<'a>> {
+pub fn uuid_validation<'a>(id: &str) -> Result<(), HubError> {
     match Uuid::parse_str(id) {
         Ok(_) => Ok(()),
-        Err(_) => {
-            let error = Error::new("uuid", json!("invalid format"));
-            Err(Errors::new(ErrorsKind::Unprocessable(error)))
-        }
+        Err(_) => Err(HubError::new_unprocessable("Invalid format of uuid", None)),
     }
 }
 
