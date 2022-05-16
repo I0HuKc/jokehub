@@ -1,9 +1,5 @@
 use lazy_static::lazy_static;
-use std::collections::HashMap;
-use std::env::VarError;
-
 use serde::Serialize;
-use serde_json::{json, Value};
 
 use mongodb::error::Error as MongoDbError;
 use validator::ValidationErrors;
@@ -14,97 +10,73 @@ use rocket::response::Responder as RocketResponder;
 use rocket::response::Response as RocketResponse;
 use rocket::serde::json::Json;
 
-// Раздел ошибки
-#[derive(Clone, Serialize, Hash, PartialEq, Eq, Debug)]
-pub struct ErrorChapter<'a>(pub &'a str);
-
-// Ошибка
-// Каждая ошибка принадлежит определенному разделу
-#[derive(Clone, Serialize, Debug)]
-pub struct Error<'a>(ErrorChapter<'a>, Value);
-
-impl<'a> Error<'a> {
-    pub fn new(ch: &'a str, body: Value) -> Self {
-        Error(ErrorChapter(ch), body)
-    }
+lazy_static! {
+    pub static ref ERR_AUTH: &'static str = "Authorization is required to access the resource.";
 }
 
-// Общая структура ошибок которая будет отдаваться на вход
-// в Rocket Responder и далее направлена клиенту HTTP запроса
-#[derive(Clone, Serialize)]
-pub struct Errors<'a> {
-    #[serde(rename(serialize = "errors"))]
-    details: HashMap<ErrorChapter<'a>, Vec<Value>>,
+pub enum ErrorKind<'a> {
+    Internal(&'a str, Option<Vec<String>>),  
+    Unprocessable(&'a str, Option<Vec<String>>),
+    NotFound(&'a str, Option<Vec<String>>),
 
-    // HTTP статус
+    Unauthorized,
+}
+
+#[derive(Clone, Serialize)]
+pub struct HubError {
+    error: String,
+    details: Vec<String>,
+
     #[serde(skip_serializing)]
     status: Status,
 }
 
-#[derive(Clone, Serialize)]
-pub enum ErrorsKind<'a> {
-    // Ошибка со статусом 500
-    //
-    // Стоит использовать когда произошла внутренняя ошибка
-    // и есть прямое взаимодействие с ее первоисточником.
-    Internal(Error<'a>),
+impl<'a> HubError {
+    fn create(err: &'a str, details: Option<Vec<String>>, status: Status) -> HubError {
+        match details {
+            Some(d) => HubError {
+                error: err.to_string(),
+                details: d,
+                status,
+            },
 
-    // Ошибка со статусом 500
-    //
-    // Стоит использовать когда произошла внутренняя ошибка
-    // и при этом нет взаимодействия с первоисточником, и пользователю
-    // должно быть отправленно базовое сообщение о произошедшем сбое.
-    InternalBase(ErrorChapter<'a>),
-
-    // Ошибка со статусом 429
-    //
-    // Ошибка при работе с ресурсом по вине пользователя. Стоит
-    // использовать при валидационых ошибках, проверках и тд.
-    Unprocessable(Error<'a>),
-
-    // Ошибка со статусом 404
-    //
-    // Очевидно, запрашиваемый ресурс не был найден.
-    NotFound(ErrorChapter<'a>),
-}
-
-impl<'a> Errors<'a> {
-    fn create(status: Status) -> Self {
-        Errors {
-            details: HashMap::new(),
-            status,
+            None => HubError {
+                error: err.to_string(),
+                details: Vec::new(),
+                status,
+            },
         }
     }
 
-    pub fn add(&mut self, err: Error<'a>) -> Self {
-        self.details
-            .entry(err.0)
-            .or_insert_with(|| Vec::new())
-            .push(err.1);
+    pub fn new(kind: ErrorKind) -> HubError {
+        match kind {
+            ErrorKind::Internal(err, d) => HubError::create(err, d, Status::InternalServerError),   
+            ErrorKind::NotFound(err, d) => HubError::create(err, d, Status::NotFound),
+            ErrorKind::Unprocessable(err, d) => HubError::create(err, d, Status::UnprocessableEntity),
+            ErrorKind::Unauthorized => HubError::create(ERR_AUTH.clone(), None, Status::Unauthorized),                
+        }
+    }
 
+    pub fn new_not_found(err: &str, d: Option<Vec<String>>) -> HubError {
+        HubError::new(ErrorKind::NotFound(err, d))
+    }
+
+    pub fn new_internal(err: &str, d: Option<Vec<String>>) -> HubError {
+        HubError::new(ErrorKind::Internal(err, d))
+    }
+
+    pub fn new_unprocessable(err: &str, d: Option<Vec<String>>) -> HubError {
+        HubError::new(ErrorKind::Unprocessable(err, d))
+    }
+
+    // Добавить новый элемент в список деталей
+    pub fn add(&mut self, d: String) -> HubError {
+        self.details.push(d);
         return self.clone();
     }
-
-    pub fn new(kind: ErrorsKind<'a>) -> Self {
-        match kind {
-            ErrorsKind::Internal(err) => Errors::create(Status::InternalServerError).add(err),
-
-            ErrorsKind::InternalBase(ch) => {
-                let err = Error::new(ch.0, json!(ERR_INTERNAL_BASE.clone()));
-                Errors::create(Status::InternalServerError).add(err)
-            }
-
-            ErrorsKind::Unprocessable(err) => Errors::create(Status::UnprocessableEntity).add(err),
-
-            ErrorsKind::NotFound(ch) => {
-                let err = Error::new(ch.0, json!(ERR_NOT_FOUND.clone()));
-                Errors::create(Status::NotFound).add(err)
-            }
-        }
-    }
 }
 
-impl<'a> RocketResponder<'a, 'static> for Errors<'_> {
+impl<'a> RocketResponder<'a, 'static> for HubError {
     fn respond_to(self, req: &'a rocket::Request<'_>) -> rocket::response::Result<'static> {
         match Json(&self).respond_to(req) {
             Ok(resp) => RocketResponse::build_from(resp)
@@ -119,80 +91,52 @@ impl<'a> RocketResponder<'a, 'static> for Errors<'_> {
     }
 }
 
-impl<'a> From<VarError> for Errors<'a> {
-    fn from(err: VarError) -> Self {
-        match err {
-            VarError::NotPresent => {
-                let err = Error::new(CH_SYSTEM.clone(), json!(ERR_ENV_VAR_NOT_FOUND.clone()));
-                Errors::new(ErrorsKind::Internal(err))
-            }
+impl From<ValidationErrors> for HubError {
+    fn from(errs: ValidationErrors) -> Self {
+        let mut error = HubError::new(ErrorKind::Unprocessable("Validation faild", Some(Vec::new())));
 
-            VarError::NotUnicode(_) => {
-                let err = Error::new(CH_SYSTEM.clone(), json!(ERR_ENV_VAR_INVALID.clone()));
-                Errors::new(ErrorsKind::Internal(err))
+        for (k, v) in errs.field_errors() {
+            for err in v {
+                let mut e = serde_json::to_string(&err.message).unwrap();
+                e = serde_json::from_str(e.as_str()).unwrap();
+                error.add(format!("Field {}: {}", k, e));
             }
         }
+
+        return error;
     }
 }
 
-impl From<MongoDbError> for Errors<'_> {
+impl From<MongoDbError> for HubError {
     fn from(err: MongoDbError) -> Self {
         match *err.kind {
             mongodb::error::ErrorKind::Write(err) => match err {
                 mongodb::error::WriteFailure::WriteError(_) => {
-                    let err = Error::new(CH_DATABASE.clone(), json!(ERR_ALREADY_EXISTS.clone()));
-                    Errors::new(ErrorsKind::Unprocessable(err))
+                    HubError::new(ErrorKind::Unprocessable(ERR_ALREADY_EXISTS.clone(), None))
                 }
-                _ => {
-                    let err = Error::new(CH_DATABASE.clone(), json!(ERR_INTERNAL_BASE.clone()));
-                    Errors::new(ErrorsKind::Internal(err))
-                }
+                _ => HubError::new(ErrorKind::Internal(format!("{:?}", err).as_str(), None)),
             },
 
-            _ => {
-                let err = Error::new(CH_DATABASE.clone(), json!(format!("{:?}", err.kind)));
-                Errors::new(ErrorsKind::Internal(err))
-            }
+            _ => HubError::new(ErrorKind::Internal(
+                format!("{:?}", err.kind).as_str(),
+                None,
+            )),
         }
     }
 }
 
-impl From<bson::ser::Error> for Errors<'_> {
+impl From<bson::ser::Error> for HubError {
     fn from(err: bson::ser::Error) -> Self {
         match err {
             bson::ser::Error::SerializationError { message, .. } => {
-                let err = Error::new(CH_SYSTEM.clone(), json!(message));
-                Errors::new(ErrorsKind::Internal(err))
+                HubError::new(ErrorKind::Internal(message.as_str(), None))
             }
-            _ => {
-                let err = Error::new(CH_DATABASE.clone(), json!(format!("{:?}", err)));
-                Errors::new(ErrorsKind::Internal(err))
-            }
+
+            _ => HubError::new(ErrorKind::Internal(format!("{:?}", err).as_str(), None)),
         }
     }
 }
 
-impl From<ValidationErrors> for Errors<'_> {
-    fn from(v_errs: ValidationErrors) -> Self {
-        let mut errs = Errors::create(Status::UnprocessableEntity);
-
-        for (k, v) in v_errs.field_errors() {
-            for err in v {
-                errs.add(Error::new(k, json!(err.message)));
-            }
-        }
-
-        return errs;
-    }
-}
-
-
-// Базовые разделы ошибок
-lazy_static! {
-    pub static ref CH_SYSTEM: &'static str = "system";
-    pub static ref CH_DATABASE: &'static str = "database";
-    pub static ref CH_SERVER: &'static str = "server";
-}
 
 // Базовые ошибки
 lazy_static! {
