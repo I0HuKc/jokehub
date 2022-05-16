@@ -29,7 +29,7 @@ pub async fn create_punch<'f>(client: MongoConn<'f>, jnp: Json<NewPunch>) -> Res
     let body = Punch::new(&jnp);
 
     let result = Shrimp::create(
-        Varys::get(client.0, Varys::Punch),
+        Varys::get(client, Varys::Punch),
         Shrimp::new(body, tail),
     )?;
 
@@ -42,7 +42,7 @@ pub async fn get_punch<'f>(client: MongoConn<'f>, id: &str) -> Result<Json<Shrim
     uuid_validation(id)?;
 
     let result: Shrimp<Punch> = Shrimp::get_by_id(
-        Varys::get(client.0, Varys::Punch), 
+        Varys::get(client, Varys::Punch), 
         id,
     )?;
 

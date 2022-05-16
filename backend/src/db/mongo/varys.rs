@@ -1,5 +1,6 @@
-use mongodb::sync::{Client, Collection};
-use rocket::State;
+use mongodb::sync::Collection;
+
+use crate::db::mongo::MongoConn;
 
 // Заведующий всеми коллекциями
 pub enum Varys {
@@ -12,17 +13,20 @@ pub enum Varys {
 }
 
 impl Varys {
-    pub fn get<'a, T>(client: &State<Box<Client>>, v: Varys) -> Collection<T> {
+    pub fn get<'a, T>(client: MongoConn, v: Varys) -> Collection<T> {
         match v {
             Varys::Anecdote => client
+                .0
                 .database(dotenv!("MONGO_DATABASE_NAME"))
                 .collection("anecdote"),
 
             Varys::Punch => client
+                .0
                 .database(dotenv!("MONGO_DATABASE_NAME"))
                 .collection("punch"),
 
             Varys::Users => client
+                .0
                 .database(dotenv!("MONGO_DATABASE_NAME"))
                 .collection("users"),
         }

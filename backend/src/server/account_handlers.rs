@@ -1,15 +1,17 @@
-use mongodb::{bson::doc, sync::Client};
+use mongodb::bson::doc;
 use r2d2_redis::redis::Commands;
-use rocket::serde::json::Json;
-use rocket::http::{CookieJar, Cookie};
-use rocket::State;
+use rocket::{
+    http::{Cookie, CookieJar},
+    serde::json::Json,
+};
+
 use serde_json::{json, Value};
 use validator::Validate;
 
 use crate::{
     db::mongo::MongoConn,
-    db::redis::RedisConn,
     db::mongo::{varys::Varys, Crud},
+    db::redis::RedisConn,
     errors::HubError,
     model::{
         account::{security::Tokens, *},
@@ -23,7 +25,7 @@ pub async fn registration<'f>(client: MongoConn<'f>, jnu: Json<NewUser>) -> Resu
     jnu.0.validate()?;
 
     let result = User::create(
-        Varys::get(client.0, Varys::Users),
+        Varys::get(client, Varys::Users),
         User::from(jnu.0).password_hashing()?
     )?;
 
@@ -36,7 +38,7 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
     jnu.0.validate()?;
 
     let result = User::get_by_username(
-        Varys::get(client.0, Varys::Users),
+        Varys::get(client, Varys::Users),
         jnu.0.username,
     )?;
 
@@ -69,7 +71,7 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
 
 
 #[get("/user/<id>")]
-pub async fn get_user<'f>(client: &State<Box<Client>>, id: &str) -> Result<Json<User>, HubError> {
+pub async fn get_user<'f>(client: MongoConn<'f>, id: &str) -> Result<Json<User>, HubError> {
     uuid_validation(id)?;
     
     let result = User::get_by_id(

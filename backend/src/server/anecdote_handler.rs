@@ -22,7 +22,7 @@ pub async fn create_anecdote<'f>(client: MongoConn<'f>, jna: Json<NewAnecdote>) 
     let body = Anecdote::new(&jna.0);
 
     let result = Shrimp::create(
-        Varys::get(client.0, Varys::Anecdote),
+        Varys::get(client, Varys::Anecdote),
         Shrimp::new(body, tail),
     )?;
 
@@ -33,7 +33,7 @@ pub async fn create_anecdote<'f>(client: MongoConn<'f>, jna: Json<NewAnecdote>) 
 #[get("/anecdote/<id>")]
 pub async fn get_anecdote<'f>(client: MongoConn<'f>, id: &str) -> Result<Json<Shrimp<Anecdote>>, HubError> {    
     let result: Shrimp<Anecdote> = Shrimp::get_by_id(
-        Varys::get(client.0, Varys::Anecdote), 
+        Varys::get(client, Varys::Anecdote), 
         id,
     )?;
 
