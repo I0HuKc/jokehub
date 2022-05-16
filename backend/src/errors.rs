@@ -19,10 +19,17 @@ pub enum ErrorKind<'a> {
     Unprocessable(&'a str, Option<Vec<String>>),
     NotFound(&'a str, Option<Vec<String>>),
 
-    Unauthorized,
+    Unauthorized(UnauthorizedErrorKind<'a>),
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug, PartialEq)]
+pub enum UnauthorizedErrorKind<'a> {
+    TokenExpired,
+    TokenMissing,
+    Generic(&'a str)
+}
+
+#[derive(Clone, Serialize, Debug, PartialEq)]
 pub struct HubError {
     error: String,
     details: Vec<String>,
@@ -53,8 +60,16 @@ impl<'a> HubError {
             ErrorKind::Internal(err, d) => HubError::create(err, d, Status::InternalServerError),   
             ErrorKind::NotFound(err, d) => HubError::create(err, d, Status::NotFound),
             ErrorKind::Unprocessable(err, d) => HubError::create(err, d, Status::UnprocessableEntity),
-            ErrorKind::Unauthorized => HubError::create(ERR_AUTH.clone(), None, Status::Unauthorized),                
+            ErrorKind::Unauthorized(err) => match err {
+                UnauthorizedErrorKind::TokenExpired => HubError::create("Token is expired", None, Status::Unauthorized),
+                UnauthorizedErrorKind::TokenMissing => HubError::create("Token is not found", None, Status::Unauthorized),
+                UnauthorizedErrorKind::Generic(e) => HubError::create(e, None, Status::InternalServerError),                
+            },                
         }
+    }
+
+    pub fn get_status(&self) -> Status {
+        return self.status;
     }
 
     pub fn new_not_found(err: &str, d: Option<Vec<String>>) -> HubError {

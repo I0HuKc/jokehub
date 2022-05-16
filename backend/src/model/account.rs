@@ -1,10 +1,8 @@
 use argon2::Config;
-use chrono::NaiveDateTime;
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use lazy_static::lazy_static;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -38,12 +36,11 @@ pub struct User {
 
     pub username: String,
     pub role: String,
-    
+
     pub hash: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
-
 
 impl From<NewUser> for User {
     fn from(nu: NewUser) -> Self {
@@ -62,7 +59,8 @@ impl<'a> User {
     // Верификация пароля
     pub fn password_verify(&self, password: &[u8]) -> Result<bool, HubError> {
         argon2::verify_encoded(&self.hash, password).map_err(|err| {
-            HubError::new_internal("Failed verify password", Some(Vec::new())).add(format!("{}", err))
+            HubError::new_internal("Failed verify password", Some(Vec::new()))
+                .add(format!("{}", err))
         })
     }
 
@@ -72,7 +70,8 @@ impl<'a> User {
         let config = Config::default();
 
         self.hash = argon2::hash_encoded(self.hash.as_bytes(), &salt, &config).map_err(|err| {
-            HubError::new_internal("Failed create password hash", Some(Vec::new())).add(format!("{}", err))
+            HubError::new_internal("Failed create password hash", Some(Vec::new()))
+                .add(format!("{}", err))
         })?;
 
         Ok(self.clone())
@@ -80,27 +79,18 @@ impl<'a> User {
 }
 
 pub mod security {
+    use chrono::prelude::*;
     use jsonwebtoken::TokenData;
-    use rocket::http::ContentType;
-    use rocket::http::Header;
-    use rocket::response::Responder as RocketResponder;
-    use rocket::response::Response as RocketResponse;
-    use rocket::serde::DeserializeOwned;
-    use rocket::serde::json::Json;
-    use serde_json::json;
-    
+    use rocket::{
+        request, request::FromRequest, request::Outcome, serde::DeserializeOwned, Request,
+    };
     use uuid::Uuid;
-
     use jsonwebtoken::{errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Validation};
-    use rocket::http::Status;
     use serde::{Deserialize, Serialize};
 
-    use crate::errors::HubError;
-
-    use chrono::prelude::*;
+    use crate::errors::{ErrorKind, HubError, UnauthorizedErrorKind};
 
     const SECRET: &str = "secret297152aebda7";
-
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct AccessClaims {
@@ -187,21 +177,43 @@ pub mod security {
         }
     }
 
-    #[derive(Debug, PartialEq)]
-    pub enum JwtDecodeError {
-        // Срок действия токена истек
-        Expired,
+    pub struct AuthGuard(AccessClaims);
 
-        // Другие непредвиденные ошибки
-        Generic,
-    }
+    #[rocket::async_trait]
+    impl<'r> FromRequest<'r> for AuthGuard {
+        type Error = HubError;
 
-    pub struct JwtGuard(String);
+        async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+            match request.headers().get_one("Authorization") {
+                Some(at) => {
+                    let split = at.split(" ");
+                    let vec = split.collect::<Vec<&str>>();
 
-    #[derive(Debug, PartialEq)]
-    pub enum JwtGuardError {
-        Missing,
-        TokenError(JwtDecodeError),
+                    if vec.len() == 1 {
+                        let token = Tokens::decode_token::<AccessClaims>(vec[1]);
+
+                        match token {
+                            Ok(t) => Outcome::Success(AuthGuard(t.claims)),
+                            Err(err) => Outcome::Failure((err.get_status(), err)),
+                        }
+                    } else {
+                        let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(
+                            "Token is in invalid format",
+                        ));
+                        let error = HubError::new(kind);
+
+                        Outcome::Failure((error.get_status(), error))
+                    }
+                }
+
+                None => {
+                    let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::TokenMissing);
+                    let err = HubError::new(kind);
+
+                    Outcome::Failure((err.get_status(), err))
+                }
+            }
+        }
     }
 
     #[derive(Clone, Serialize, Deserialize)]
@@ -211,8 +223,8 @@ pub mod security {
     }
 
     impl<'a> Tokens {
-        pub fn new(username: String, role: String) -> Result<Tokens, HubError> {      
-            let access_claims = AccessClaims::new(username, role);    
+        pub fn new(username: String, role: String) -> Result<Tokens, HubError> {
+            let access_claims = AccessClaims::new(username, role);
             let refresh_claims = RefreshClaims::new(&access_claims);
 
             let tokens = Tokens {
@@ -230,10 +242,10 @@ pub mod security {
                 &EncodingKey::from_secret(SECRET.as_ref()),
             )
             .map_err(|err| {
-                HubError::new_internal("Failed to create access token", Some(Vec::new())).add(format!("{}", err))
+                HubError::new_internal("Failed to create access token", Some(Vec::new()))
+                    .add(format!("{}", err))
             })
         }
-
 
         fn encode_refresh_token(rc: &RefreshClaims) -> Result<String, HubError> {
             jsonwebtoken::encode(
@@ -242,11 +254,12 @@ pub mod security {
                 &EncodingKey::from_secret(SECRET.as_ref()),
             )
             .map_err(|err| {
-                HubError::new_internal("Failed to create refresh token", Some(Vec::new())).add(format!("{}", err))
+                HubError::new_internal("Failed to create refresh token", Some(Vec::new()))
+                    .add(format!("{}", err))
             })
         }
 
-        pub fn decode_token<T>(token: String) -> Result<TokenData<T>, JwtDecodeError>
+        pub fn decode_token<T>(token: &'a str) -> Result<TokenData<T>, HubError>
         where
             T: DeserializeOwned,
         {
@@ -257,10 +270,21 @@ pub mod security {
             ) {
                 Ok(token_data) => Ok(token_data),
                 Err(err) => match *err.kind() {
-                    JwtErrorKind::ExpiredSignature => Err(JwtDecodeError::Expired),
-                    _ => Err(JwtDecodeError::Generic),
+                    JwtErrorKind::ExpiredSignature => {
+                        let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::TokenExpired);
+
+                        Err(HubError::new(kind))
+                    }
+                    _ => {
+                        let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(
+                            "Faild to decode token",
+                        ));
+                        let error = HubError::new(kind).add(format!("{}", err));
+
+                        Err(error)
+                    }
                 },
             }
-    }
+        }
     }
 }

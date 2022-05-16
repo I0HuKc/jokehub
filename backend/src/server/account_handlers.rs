@@ -1,7 +1,6 @@
 use mongodb::bson::doc;
 use r2d2_redis::redis::Commands;
 use rocket::{
-    http::{Cookie, CookieJar},
     serde::json::Json,
 };
 
@@ -14,7 +13,7 @@ use crate::{
     db::redis::RedisConn,
     errors::HubError,
     model::{
-        account::{security::Tokens, *},
+        account::{security::{Tokens, AuthGuard}, *},
         uuid_validation,
     },
 };
@@ -34,7 +33,7 @@ pub async fn registration<'f>(client: MongoConn<'f>, jnu: Json<NewUser>) -> Resu
 }
 
 #[post("/login", data = "<jnu>")]
-pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<NewUser>, cookies: &CookieJar<'_>) -> Result<(), HubError> {
+pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<NewUser>) -> Result<Json<Tokens>, HubError> {
     jnu.0.validate()?;
 
     let result = User::get_by_username(
@@ -45,20 +44,16 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
     match result.password_verify(format!("{}", jnu.0.password).as_bytes()) {
         Ok(v) => {
             if v {  
-                let tokens = Tokens::new(result.username.clone(), result.role)?;   
-                      
+                let tokens = Tokens::new(result.username.clone(), result.role)?;                        
 
                 // Сохранение токена обновления в redis             
                 redis.set_ex::<String, String, ()>(tokens.refresh_token.clone(), result.username.clone(), 60*60*24*7)
                 .map_err(|err| {
                     HubError::new_internal("Falid to set in redis", Some(Vec::new())).add(format!("{}", err))            
                 })?;
+        
 
-                // Запись токенов в cookies
-                cookies.add(Cookie::new("at", tokens.access_token.clone()));  
-                cookies.add(Cookie::new("rt", tokens.refresh_token.clone()));    
-
-                Ok(())
+                Ok(Json(tokens))
             } else {      
                 Err(HubError::new_not_found("User was not found", None))
             }
@@ -71,7 +66,7 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
 
 
 #[get("/user/<id>")]
-pub async fn get_user<'f>(client: MongoConn<'f>, id: &str) -> Result<Json<User>, HubError> {
+pub async fn get_user<'f>(client: MongoConn<'f>, id: &str, _auth : AuthGuard) -> Result<Json<User>, HubError> {
     uuid_validation(id)?;
     
     let result = User::get_by_id(

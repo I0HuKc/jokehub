@@ -5,15 +5,18 @@ mod joke_handler;
 mod ping_handler;
 mod punch_handler;
 
-use rocket::serde::json::{json, Value};
+use crate::{
+    db::DbManage,
+    errors::{ErrorKind, HubError, UnauthorizedErrorKind},
+};
 
-use crate::db::DbManage;
-
-use anecdote_handler::*;
-// use joke_handler::*;
-use account_handlers::*;
-use ping_handler::*;
-use punch_handler::*;
+use {
+    // use joke_handler::*;
+    account_handlers::*,
+    anecdote_handler::*,
+    ping_handler::*,
+    punch_handler::*,
+};
 
 #[cfg(test)]
 mod tests;
@@ -37,13 +40,21 @@ pub fn rocket() -> _ {
                 login
             ],
         )
-        .register("/", catchers![not_found])
+        .register("/", catchers![not_found, unauthorized, internal])
 }
 
 #[catch(404)]
-fn not_found() -> Value {
-    json!({
-        "status": "error",
-        "reason": "Resource was not found."
-    })
+fn not_found() -> HubError {
+    HubError::new_not_found("Resource not found", None)
+}
+
+#[catch(500)]
+fn internal() -> HubError {
+    HubError::new_internal("Opps, something went wrong...", None)
+}
+
+#[catch(401)]
+fn unauthorized() -> HubError {
+    let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic("Authorization required"));
+    HubError::new(kind)
 }
