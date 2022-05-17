@@ -1,8 +1,6 @@
 use mongodb::bson::doc;
 use r2d2_redis::redis::Commands;
-use rocket::{
-    serde::json::Json,
-};
+use rocket::serde::json::Json;
 
 use serde_json::{json, Value};
 use validator::Validate;
@@ -13,7 +11,10 @@ use crate::{
     db::redis::RedisConn,
     errors::HubError,
     model::{
-        account::{security::{Tokens, AuthGuard}, *},
+        account::{
+            security::{AuthGuard, Tokens},
+            *,
+        },
         uuid_validation,
     },
 };
@@ -41,26 +42,19 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
         jnu.0.username,
     )?;
 
-    match result.password_verify(format!("{}", jnu.0.password).as_bytes()) {
-        Ok(v) => {
-            if v {  
-                let tokens = Tokens::new(result.username.clone(), result.role)?;                        
+    if result.password_verify(format!("{}", jnu.0.password).as_bytes())? {  
+        let tokens = Tokens::new(result.username.clone(), result.role)?;                        
 
-                // Сохранение токена обновления в redis             
-                redis.set_ex::<String, String, ()>(tokens.refresh_token.clone(), result.username.clone(), 60*60*24*7)
-                .map_err(|err| {
-                    HubError::new_internal("Falid to set in redis", Some(Vec::new())).add(format!("{}", err))            
-                })?;
-        
+        // Сохранение токена обновления в redis             
+        redis.set_ex::<String, String, ()>(tokens.refresh_token.clone(), result.username.clone(), 60*60*24*7)
+        .map_err(|err| {
+            HubError::new_internal("Falid to set in redis", Some(Vec::new())).add(format!("{}", err))            
+        })?;
 
-                Ok(Json(tokens))
-            } else {      
-                Err(HubError::new_not_found("User was not found", None))
-            }
 
-        },
-        
-        Err(err) => Err(err),
+        Ok(Json(tokens))
+    } else {      
+        Err(HubError::new_not_found("User was not found", None))
     }
 }
 

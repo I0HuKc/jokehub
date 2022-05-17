@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use serde::Serialize;
 
 use mongodb::error::Error as MongoDbError;
@@ -10,9 +9,8 @@ use rocket::response::Responder as RocketResponder;
 use rocket::response::Response as RocketResponse;
 use rocket::serde::json::Json;
 
-lazy_static! {
-    pub static ref ERR_AUTH: &'static str = "Authorization is required to access the resource.";
-}
+use message::*;
+
 
 pub enum ErrorKind<'a> {
     Internal(&'a str, Option<Vec<String>>),  
@@ -127,7 +125,7 @@ impl From<MongoDbError> for HubError {
         match *err.kind {
             mongodb::error::ErrorKind::Write(err) => match err {
                 mongodb::error::WriteFailure::WriteError(_) => {
-                    HubError::new(ErrorKind::Unprocessable(ERR_ALREADY_EXISTS.clone(), None))
+                    HubError::new(ErrorKind::Unprocessable(ERR_ALREADY_EXISTS.as_ref(), None))
                 }
                 _ => HubError::new(ErrorKind::Internal(format!("{:?}", err).as_str(), None)),
             },
@@ -152,20 +150,11 @@ impl From<bson::ser::Error> for HubError {
     }
 }
 
+pub mod message {
+    use lazy_static::lazy_static;
 
-// Базовые ошибки
-lazy_static! {
-    static ref ERR_INTERNAL_BASE: &'static str = "Looks like something went wrong.";
-}
-
-// Базовые ошибки БД
-lazy_static! {
-    pub static ref ERR_ALREADY_EXISTS: &'static str = "Record with these parameters already exists";
-    pub static ref ERR_NOT_FOUND: &'static str = "Resource was not found";
-}
-
-// Ошибки env раздела
-lazy_static! {
-    static ref ERR_ENV_VAR_NOT_FOUND: &'static str = "The specified environment variable was not present in the current process's environment.";
-    static ref ERR_ENV_VAR_INVALID: &'static str = "The specified environment variable was found, but it did not contain valid unicode data. The found data is returned as a payload of this variant.";
+    lazy_static! {
+        pub static ref ERR_ALREADY_EXISTS: &'static str = "Resource already exists";
+        pub static ref ERR_NOT_FOUND: &'static str = "Resource not found";
+    }
 }

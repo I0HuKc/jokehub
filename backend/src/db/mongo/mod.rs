@@ -20,6 +20,8 @@ use rocket::{
     Request, State,
 };
 
+use crate::errors::message::ERR_NOT_FOUND;
+
 pub struct MongoConn<'a>(pub &'a State<Box<Client>>);
 
 pub fn connect() -> Option<Client> {
@@ -77,10 +79,7 @@ where
     fn get_by_id(collection: Collection<T>, id: &str) -> Result<T, HubError> {
         match collection.find_one(doc! { "_id":  id}, None)? {
             Some(value) => Ok(value),
-            None => Err(HubError::new_not_found(
-                "Record with such id is not found.",
-                None,
-            )),
+            None => Err(HubError::new_not_found(ERR_NOT_FOUND.as_ref(), None)),
         }
     }
 }

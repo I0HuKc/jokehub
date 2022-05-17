@@ -7,7 +7,7 @@ mod punch_handler;
 
 use crate::{
     db::DbManage,
-    errors::{ErrorKind, HubError, UnauthorizedErrorKind},
+    errors::{ErrorKind, HubError, UnauthorizedErrorKind, message::ERR_NOT_FOUND},
 };
 
 use {
@@ -45,7 +45,7 @@ pub fn rocket() -> _ {
 
 #[catch(404)]
 fn not_found() -> HubError {
-    HubError::new_not_found("Resource not found", None)
+    HubError::new_not_found(ERR_NOT_FOUND.as_ref(), None)
 }
 
 #[catch(500)]
