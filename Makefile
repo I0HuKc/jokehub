@@ -50,7 +50,7 @@ config-backend:
 
 
 count-backend:
-	find backend/src -name jokehub -prune -o -type f -name '*.rs' | xargs wc -l
+	find backend/src backend/tests -name jokehub -prune -o -type f -name '*.rs' | xargs wc -l
 
 
 # Удалить все volumes и сети созданые этим проектом
