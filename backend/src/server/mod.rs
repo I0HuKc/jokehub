@@ -7,7 +7,7 @@ mod punch_handler;
 
 use crate::{
     db::DbManage,
-    errors::{ErrorKind, HubError, UnauthorizedErrorKind, message::ERR_NOT_FOUND},
+    errors::{message::ERR_NOT_FOUND, ErrorKind, HubError, UnauthorizedErrorKind},
 };
 
 use {
@@ -17,9 +17,6 @@ use {
     ping_handler::*,
     punch_handler::*,
 };
-
-// #[cfg(test)]
-// mod tests;
 
 #[launch]
 pub fn rocket() -> _ {
@@ -36,8 +33,8 @@ pub fn rocket() -> _ {
                 create_punch,
                 get_punch,
                 registration,
-                get_user,
-                login
+                login,
+                account,
             ],
         )
         .register("/", catchers![not_found, unauthorized, internal])

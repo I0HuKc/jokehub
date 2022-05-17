@@ -81,19 +81,19 @@ impl<'a> User {
 pub mod security {
     use chrono::prelude::*;
     use jsonwebtoken::TokenData;
+    use jsonwebtoken::{errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Validation};
     use rocket::{
         request, request::FromRequest, request::Outcome, serde::DeserializeOwned, Request,
     };
-    use uuid::Uuid;
-    use jsonwebtoken::{errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Validation};
     use serde::{Deserialize, Serialize};
+    use uuid::Uuid;
 
     use crate::errors::{ErrorKind, HubError, UnauthorizedErrorKind};
 
     const SECRET: &str = "secret297152aebda7";
 
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct AccessClaims {
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    pub struct AccessClaims {
         access_uuid: Uuid,
         username: String,
         role: String,
@@ -118,6 +118,14 @@ pub mod security {
                 role,
                 exp,
             }
+        }
+
+        pub fn get_username(&self) -> String {
+            return self.username.clone();
+        }
+
+        pub fn get_role(&self) -> String {
+            return self.role.clone();
         }
     }
 
@@ -177,7 +185,7 @@ pub mod security {
         }
     }
 
-    pub struct AuthGuard(AccessClaims);
+    pub struct AuthGuard(pub AccessClaims);
 
     #[rocket::async_trait]
     impl<'r> FromRequest<'r> for AuthGuard {
@@ -189,20 +197,20 @@ pub mod security {
                     let split = at.split(" ");
                     let vec = split.collect::<Vec<&str>>();
 
-                    if vec.len() == 1 {
-                        let token = Tokens::decode_token::<AccessClaims>(vec[1]);
-
-                        match token {
-                            Ok(t) => Outcome::Success(AuthGuard(t.claims)),
-                            Err(err) => Outcome::Failure((err.get_status(), err)),
-                        }
-                    } else {
+                    if vec.len() != 2 {
                         let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(
                             "Token is in invalid format",
                         ));
                         let error = HubError::new(kind);
 
                         Outcome::Failure((error.get_status(), error))
+                    } else {
+                        let token = Tokens::decode_token::<AccessClaims>(vec[1]);
+
+                        match token {
+                            Ok(t) => Outcome::Success(AuthGuard(t.claims)),
+                            Err(err) => Outcome::Failure((err.get_status(), err)),
+                        }
                     }
                 }
 

@@ -61,7 +61,7 @@ impl<'a> HubError {
             ErrorKind::Unauthorized(err) => match err {
                 UnauthorizedErrorKind::TokenExpired => HubError::create("Token is expired", None, Status::Unauthorized),
                 UnauthorizedErrorKind::TokenMissing => HubError::create("Token is not found", None, Status::Unauthorized),
-                UnauthorizedErrorKind::Generic(e) => HubError::create(e, None, Status::InternalServerError),                
+                UnauthorizedErrorKind::Generic(e) => HubError::create(e, None, Status::Unauthorized),                
             },                
         }
     }

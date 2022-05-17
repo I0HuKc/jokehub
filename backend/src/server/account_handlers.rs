@@ -15,7 +15,6 @@ use crate::{
             security::{AuthGuard, Tokens},
             *,
         },
-        uuid_validation,
     },
 };
 
@@ -58,14 +57,11 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
     }
 }
 
-
-#[get("/user/<id>")]
-pub async fn get_user<'f>(client: MongoConn<'f>, id: &str, _auth : AuthGuard) -> Result<Json<User>, HubError> {
-    uuid_validation(id)?;
-    
-    let result = User::get_by_id(
+#[get("/account")]
+pub async fn account<'f>(client: MongoConn<'f>, _auth : AuthGuard) -> Result<Json<User>, HubError> {
+    let result = User::get_by_username(
         Varys::get(client, Varys::Users),
-        id,
+        _auth.0.get_username()
     )?;
 
     Ok(Json(result))
