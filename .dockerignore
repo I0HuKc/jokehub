@@ -9,6 +9,7 @@ tools/*
 .vscode
 .gitignore
 .env.example
+.env.test
 docker-compose.yml
 /*.sql
 Makefile

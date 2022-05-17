@@ -1,11 +1,10 @@
 use rocket::http::{ContentType, Status};
 
-use super::common::*;
-use crate::json_string;
+mod common;
 
 #[test]
 fn get_punch() {
-    let client = test_client().lock().unwrap();
+    let client = common::test_client().lock().unwrap();
 
     // Создание тестовой записи
     let resp = client
@@ -20,7 +19,7 @@ fn get_punch() {
 
     assert_eq!(resp.status(), Status::Ok);
 
-    let value = response_json_value(resp);
+    let value = common::response_json_value(resp);
     let id = value
         .get("id")
         .expect("must have a 'id' field")
@@ -41,11 +40,7 @@ fn get_punch() {
             "b7b24959-3aa3-461a-a01a-c805697deeb",
             Status::UnprocessableEntity,
         ),
-        (
-            "valid", 
-            id,
-            Status::Ok
-        ),
+        ("valid", id, Status::Ok),
     ];
 
     for tc in test_cases {
@@ -57,18 +52,18 @@ fn get_punch() {
         assert_eq!(resp.status(), tc.2, "{}", tc.0);
 
         if resp.status() != tc.2 {
-            println!("{:?}", response_json_value(resp));
+            println!("{:?}", common::response_json_value(resp));
         }
     }
 }
 
 #[test]
 fn create_punch() {
-    let client = test_client().lock().unwrap();
+    let client = common::test_client().lock().unwrap();
 
-    let test_cases: Vec<TestCase> = vec![
-        // Invalid language [type]
-        TestCase(
+    let test_cases: Vec<(&str, String, Status)> = vec![
+        (
+            "invalid language [type]",
             json_string!({
                 "language": "es",
                 "setup": "Как каннибал называет Пашу?",
@@ -76,8 +71,8 @@ fn create_punch() {
             }),
             Status::UnprocessableEntity,
         ),
-        // Invalid language [lenght]
-        TestCase(
+        (
+            "invalid language [lenght]",
             json_string!({
                 "language": "ruu",
                 "setup": "Как каннибал называет Пашу?",
@@ -85,8 +80,8 @@ fn create_punch() {
             }),
             Status::UnprocessableEntity,
         ),
-        // Valid with empty tags
-        TestCase(
+        (
+            "valid with empty tags",
             json_string!({
                 "language": "ru",
                 "setup": "Как каннибал называет Пашу?",
@@ -94,8 +89,8 @@ fn create_punch() {
             }),
             Status::Ok,
         ),
-        // Valid
-        TestCase(
+        (
+            "valid",
             json_string!({
                 "tags": ["meme"],
                 "language": "ru",
@@ -110,13 +105,13 @@ fn create_punch() {
         let resp = client
             .post("/v1/punch/new")
             .header(ContentType::JSON)
-            .body(tc.0)
+            .body(tc.1)
             .dispatch();
 
-        assert_eq!(resp.status(), tc.1);
+        assert_eq!(resp.status(), tc.2, "{}", tc.0);
 
-        if resp.status() != tc.1 {
-            println!("{:?}", response_json_value(resp));
+        if resp.status() != tc.2 {
+            println!("{:?}", common::response_json_value(resp));
         }
     }
 }

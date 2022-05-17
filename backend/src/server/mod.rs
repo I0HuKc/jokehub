@@ -18,8 +18,8 @@ use {
     punch_handler::*,
 };
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 #[launch]
 pub fn rocket() -> _ {

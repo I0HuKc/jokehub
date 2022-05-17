@@ -32,8 +32,31 @@ services:
     container_name: jokehub_mongodb_test
     restart: unless-stopped
 
+  jokehub_redis_test:
+    image: redis:6-alpine
+    ports:
+      - "127.0.0.1:35006:6379"
+    healthcheck:
+      test: [
+        "CMD", 
+        "redis-cli", 
+        "--raw", 
+        "incr", 
+        "ping"
+      ]
+      interval: 1s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - redis_data_test:/var/lib/redis
+    container_name: jokehub_redis_test
+    restart: unless-stopped
+
 volumes:
   mongodb_data_test:
+    driver: local
+
+  redis_data_test:
     driver: local
 
 networks:

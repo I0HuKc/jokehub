@@ -81,7 +81,8 @@ test-backend:
 	scripts/run_tests.sh	
 
 #	Останавливаю контейнеры всех запущенных тестовых служб
-	docker stop jokehub_mongodb_test
+	docker stop jokehub_mongodb_test \
+		jokehub_redis_test \
 
 #	Удалаю все что создали контейнеры тестовых служб
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),test)) down \
