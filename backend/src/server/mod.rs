@@ -36,7 +36,8 @@ pub fn rocket() -> _ {
                 login,
                 account,
                 refresh_token,
-                logout
+                logout,
+                delete_account,
             ],
         )
         .register("/", catchers![not_found, unauthorized, internal])

@@ -141,3 +141,17 @@ pub fn logout<'f>(
 
     Ok(())
 }
+
+#[delete("/account/delete")]
+pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(), HubError> {
+    User::del_by_username(
+        Varys::get(client, Varys::Users),
+        _auth.0.get_username()
+    ).and_then(|d_result| {
+        if d_result.deleted_count < 1 {
+            Err(HubError::new_not_found("User was not found", None))
+        } else {
+            Ok(())
+        }
+    })
+}

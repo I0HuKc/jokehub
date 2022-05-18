@@ -166,7 +166,7 @@ fn registration(body: String, status: Status) {
 fn account_padawan() {
     let path: &str = "/v1/account";
     let client = common::test_client().lock().unwrap();
-    let padawan = TestPadawan::new();
+    let padawan = TestPadawan::default();
 
     match common::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
@@ -191,7 +191,7 @@ fn account_padawan() {
 fn refresh_token() {
     let path: &str = "/v1/account/token/refresh";
     let client = common::test_client().lock().unwrap();
-    let padawan = TestPadawan::new();
+    let padawan = TestPadawan::default();
 
     match common::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
@@ -243,7 +243,7 @@ fn refresh_token() {
 fn logout() {
     let path: &str = "/v1/account/logout";
     let client = common::test_client().lock().unwrap();
-    let padawan = TestPadawan::new();
+    let padawan = TestPadawan::default();
 
     match common::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
@@ -268,6 +268,25 @@ fn logout() {
             // Пытаюсь снова войти со старыми токенами
             assert_eq!(login(&client, &tokens, path), Status::Unauthorized);
         }
+
+        Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    }
+}
+
+#[test]
+fn delete_account() {
+    let path: &str = "/v1/account/delete";
+    let client = common::test_client().lock().unwrap();
+    let padawan = TestPadawan::new("delpad", "somepassword");
+
+    match common::try_login(&client, Box::new(padawan)) {
+        Ok(tokens) => {
+            let header = Header::new("Authorization", format!("Bearer {}", tokens.access_token));
+            let resp = client.delete(format!("{}", path)).header(header).dispatch();
+
+            assert_eq!(resp.status(), Status::Ok);
+        }
+
         Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
     }
 }
@@ -280,7 +299,7 @@ mod auth_guard {
     fn invalid_format_without_bearer() {
         let path: &str = "/v1/account";
         let client = common::test_client().lock().unwrap();
-        let padawan = TestPadawan::new();
+        let padawan = TestPadawan::default();
 
         match common::try_login(&client, Box::new(padawan)) {
             Ok(tokens) => {
@@ -290,6 +309,7 @@ mod auth_guard {
 
                 assert_eq!(resp.status(), Status::Unauthorized);
             }
+
             Err(err) => {
                 assert!(false, "\n\nFaild to login: {}\n\n", err)
             }
@@ -300,7 +320,7 @@ mod auth_guard {
     fn invalid_format_without_token() {
         let path: &str = "/v1/account";
         let client = common::test_client().lock().unwrap();
-        let padawan = TestPadawan::new();
+        let padawan = TestPadawan::default();
 
         match common::try_login(&client, Box::new(padawan)) {
             Ok(_) => {
@@ -310,6 +330,7 @@ mod auth_guard {
 
                 assert_eq!(resp.status(), Status::Unauthorized);
             }
+
             Err(err) => {
                 assert!(false, "\n\nFaild to login: {}\n\n", err)
             }
@@ -320,7 +341,7 @@ mod auth_guard {
     fn without_header() {
         let path: &str = "/v1/account";
         let client = common::test_client().lock().unwrap();
-        let padawan = TestPadawan::new();
+        let padawan = TestPadawan::default();
 
         match common::try_login(&client, Box::new(padawan)) {
             Ok(_) => {
@@ -328,6 +349,7 @@ mod auth_guard {
 
                 assert_eq!(resp.status(), Status::Unauthorized);
             }
+
             Err(err) => {
                 assert!(false, "\n\nFaild to login: {}\n\n", err)
             }
@@ -338,7 +360,7 @@ mod auth_guard {
     fn valid() {
         let path: &str = "/v1/account";
         let client = common::test_client().lock().unwrap();
-        let padawan = TestPadawan::new();
+        let padawan = TestPadawan::default();
 
         match common::try_login(&client, Box::new(padawan)) {
             Ok(tokens) => {
@@ -349,6 +371,7 @@ mod auth_guard {
 
                 assert_eq!(resp.status(), Status::Ok);
             }
+
             Err(err) => {
                 assert!(false, "\n\nFaild to login: {}\n\n", err)
             }

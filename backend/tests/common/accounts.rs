@@ -12,8 +12,14 @@ pub struct TestPadawan<'a> {
 
 impl<'a> TestPadawan<'a> {
     #[allow(dead_code)]
-    pub fn new() -> Self {
-        TestPadawan {
+    pub fn new(username: &'a str, password: &'a str) -> Self {
+        TestPadawan { username, password }
+    }
+}
+
+impl<'a> Default for TestPadawan<'a> {
+    fn default() -> Self {
+        Self {
             username: "upadawan",
             password: "password2022",
         }
