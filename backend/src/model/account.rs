@@ -1,6 +1,5 @@
 use argon2::Config;
 use chrono::{NaiveDateTime, Utc};
-use lazy_static::lazy_static;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -9,10 +8,6 @@ use validator::Validate;
 use super::validate_query;
 use crate::errors::HubError;
 
-lazy_static! {
-    static ref ROLE_USER: &'static str = "user";
-    static ref ROLE_ADMIN: &'static str = "admin";
-}
 
 #[derive(Clone, Validate, Deserialize)]
 pub struct NewUser {
@@ -29,15 +24,44 @@ pub struct NewUser {
     pub password: String,
 }
 
+#[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
+pub enum Level {
+    #[serde(rename = "padawan")]
+    Padawan,
+
+    #[serde(rename = "master")]
+    Master,
+
+    #[serde(rename = "sith")]
+    Sith,
+}
+
+#[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
+pub enum Tariff {
+    #[serde(rename = "free")]
+    Free,
+
+    #[serde(rename = "basic")]
+    Basic,
+
+    #[serde(rename = "standart")]
+    Standart,
+
+    #[serde(rename = "enterprice")]
+    Enterprice,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
     #[serde(rename = "_id")]
     pub id: String,
 
     pub username: String,
-    pub role: String,
-
     pub hash: String,
+
+    pub level: Level,
+    pub tariff: Tariff,
+
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -47,7 +71,8 @@ impl From<NewUser> for User {
         User {
             id: Uuid::new_v4().to_string(),
             username: nu.username,
-            role: String::from(ROLE_USER.clone()),
+            level: Level::Padawan,
+            tariff: Tariff::Free,
             hash: nu.password,
             created_at: Utc::now().naive_utc(),
             updated_at: Utc::now().naive_utc(),
@@ -78,6 +103,25 @@ impl<'a> User {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UserResp {
+    pub username: String,
+    pub tariff: Tariff,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl From<User> for UserResp {
+    fn from(u: User) -> Self {
+        UserResp {
+            username: u.username,
+            tariff: u.tariff,
+            created_at: u.created_at,
+            updated_at: u.updated_at,
+        }
+    }
+}
+
 pub mod security {
     use chrono::prelude::*;
     use jsonwebtoken::TokenData;
@@ -88,7 +132,10 @@ pub mod security {
     use serde::{Deserialize, Serialize};
     use uuid::Uuid;
 
-    use crate::errors::{ErrorKind, HubError, UnauthorizedErrorKind};
+    use crate::{
+        errors::{ErrorKind, HubError, UnauthorizedErrorKind},
+        model::account::{Level, Tariff},
+    };
 
     const SECRET: &str = "secret297152aebda7";
 
@@ -96,14 +143,15 @@ pub mod security {
     pub struct AccessClaims {
         access_uuid: Uuid,
         username: String,
-        role: String,
+        level: Level,
+        tariff: Tariff,
 
         #[serde(with = "jwt_numeric_date")]
         exp: DateTime<Utc>,
     }
 
     impl AccessClaims {
-        fn new(username: String, role: String) -> Self {
+        fn new(username: String, level: Level, tariff: Tariff) -> Self {
             // Задаю срок жизни access токена
             let exp = Utc::now() + chrono::Duration::minutes(15);
 
@@ -115,7 +163,8 @@ pub mod security {
             AccessClaims {
                 access_uuid: Uuid::new_v4(),
                 username,
-                role,
+                level,
+                tariff,
                 exp,
             }
         }
@@ -124,8 +173,8 @@ pub mod security {
             return self.username.clone();
         }
 
-        pub fn get_role(&self) -> String {
-            return self.role.clone();
+        pub fn get_role(&self) -> Level {
+            return self.level.clone();
         }
     }
 
@@ -231,8 +280,8 @@ pub mod security {
     }
 
     impl<'a> Tokens {
-        pub fn new(username: String, role: String) -> Result<Tokens, HubError> {
-            let access_claims = AccessClaims::new(username, role);
+        pub fn new(username: String, level: Level, tariff: Tariff) -> Result<Tokens, HubError> {
+            let access_claims = AccessClaims::new(username, level, tariff);
             let refresh_claims = RefreshClaims::new(&access_claims);
 
             let tokens = Tokens {

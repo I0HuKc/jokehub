@@ -42,7 +42,7 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
     )?;
 
     if result.password_verify(format!("{}", jnu.0.password).as_bytes())? {  
-        let tokens = Tokens::new(result.username.clone(), result.role)?;                        
+        let tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;                        
 
         // Сохранение токена обновления в redis             
         redis.set_ex::<String, String, ()>(tokens.refresh_token.clone(), result.username.clone(), 60*60*24*7)
@@ -58,11 +58,11 @@ pub async fn login<'f>(client: MongoConn<'f>, mut redis: RedisConn, jnu: Json<Ne
 }
 
 #[get("/account")]
-pub async fn account<'f>(client: MongoConn<'f>, _auth : AuthGuard) -> Result<Json<User>, HubError> {
+pub async fn account<'f>(client: MongoConn<'f>, _auth : AuthGuard) -> Result<Json<UserResp>, HubError> {
     let result = User::get_by_username(
         Varys::get(client, Varys::Users),
         _auth.0.get_username()
     )?;
 
-    Ok(Json(result))
+    Ok(Json(UserResp::from(result)))
 }
