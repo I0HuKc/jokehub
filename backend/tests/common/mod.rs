@@ -1,10 +1,12 @@
+pub mod accounts;
+
 use once_cell::sync::OnceCell;
-use rand::{distributions::Alphanumeric, Rng};
 use rocket::http::{ContentType, Status};
 use rocket::local::blocking::{Client, LocalResponse};
 use serde_json::Value;
 use std::sync::Mutex;
 
+use accounts::TestUser;
 use jokehub::{model::account::security::Tokens, server};
 
 // Создать тестовый аккаунт
@@ -49,16 +51,8 @@ fn login(client: &Client, username: &str, password: &str) -> Result<Tokens, (Sta
 }
 
 #[allow(dead_code)]
-pub fn try_login(client: &Client) -> Result<Tokens, Value> {
-    let username: String = rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(7)
-        .map(char::from)
-        .collect();
-
-    let password = "12344321e".to_string();
-
-    match login(client, username.as_str(), password.as_str()) {
+pub fn try_login(client: &Client, user: Box<dyn TestUser>) -> Result<Tokens, Value> {
+    match login(client, user.get_username(), user.get_password()) {
         // Если удалось авторизоваться возвращаю токены
         Ok(tokens) => Ok(tokens),
 
@@ -68,10 +62,10 @@ pub fn try_login(client: &Client) -> Result<Tokens, Value> {
                 Err(value)
             } else {
                 // Регистрирую пользователя
-                registration(client, username.as_str(), password.as_str())?;
+                registration(client, user.get_username(), user.get_password())?;
 
                 // Пытаюсь авторизоваться еще раз
-                match login(client, username.as_str(), password.as_str()) {
+                match login(client, user.get_username(), user.get_password()) {
                     Ok(tokens) => Ok(tokens),
                     Err((_, v)) => Err(v),
                 }

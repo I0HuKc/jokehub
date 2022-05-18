@@ -8,7 +8,6 @@ use validator::Validate;
 use super::validate_query;
 use crate::errors::HubError;
 
-
 #[derive(Clone, Validate, Deserialize)]
 pub struct NewUser {
     #[validate(
@@ -178,16 +177,13 @@ pub mod security {
         }
     }
 
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct RefreshClaims {
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    pub struct RefreshClaims {
         refresh_uuid: Uuid,
-        access_uuid: Uuid,
+        username: String,
 
         #[serde(with = "jwt_numeric_date")]
-        refresh_exp: DateTime<Utc>,
-
-        #[serde(with = "jwt_numeric_date")]
-        access_exp: DateTime<Utc>,
+        exp: DateTime<Utc>,
     }
 
     impl RefreshClaims {
@@ -201,11 +197,14 @@ pub mod security {
                 .and_hms_milli(exp.hour(), exp.minute(), exp.second(), 0);
 
             RefreshClaims {
-                refresh_uuid: Uuid::new_v4(),
-                access_uuid: ac.access_uuid,
-                refresh_exp: exp,
-                access_exp: ac.exp,
+                refresh_uuid: Uuid::new_v4(),               
+                username: ac.get_username(),
+                exp,             
             }
+        }
+
+        pub fn get_username(&self) -> String {
+            return self.username.clone();
         }
     }
 
@@ -343,5 +342,10 @@ pub mod security {
                 },
             }
         }
+    }
+
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct RefreshResp<'a> {
+        pub refresh_token: &'a str,
     }
 }
