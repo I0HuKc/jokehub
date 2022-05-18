@@ -11,9 +11,8 @@ use rocket::serde::json::Json;
 
 use message::*;
 
-
 pub enum ErrorKind<'a> {
-    Internal(&'a str, Option<Vec<String>>),  
+    Internal(&'a str, Option<Vec<String>>),
     Unprocessable(&'a str, Option<Vec<String>>),
     NotFound(&'a str, Option<Vec<String>>),
 
@@ -24,7 +23,7 @@ pub enum ErrorKind<'a> {
 pub enum UnauthorizedErrorKind<'a> {
     TokenExpired,
     TokenMissing,
-    Generic(&'a str)
+    Generic(&'a str),
 }
 
 #[derive(Clone, Serialize, Debug, PartialEq)]
@@ -55,14 +54,22 @@ impl<'a> HubError {
 
     pub fn new(kind: ErrorKind) -> HubError {
         match kind {
-            ErrorKind::Internal(err, d) => HubError::create(err, d, Status::InternalServerError),   
+            ErrorKind::Internal(err, d) => HubError::create(err, d, Status::InternalServerError),
             ErrorKind::NotFound(err, d) => HubError::create(err, d, Status::NotFound),
-            ErrorKind::Unprocessable(err, d) => HubError::create(err, d, Status::UnprocessableEntity),
+            ErrorKind::Unprocessable(err, d) => {
+                HubError::create(err, d, Status::UnprocessableEntity)
+            }
             ErrorKind::Unauthorized(err) => match err {
-                UnauthorizedErrorKind::TokenExpired => HubError::create("Token is expired", None, Status::Unauthorized),
-                UnauthorizedErrorKind::TokenMissing => HubError::create("Token is not found", None, Status::Unauthorized),
-                UnauthorizedErrorKind::Generic(e) => HubError::create(e, None, Status::Unauthorized),                
-            },                
+                UnauthorizedErrorKind::TokenExpired => {
+                    HubError::create("Token is expired", None, Status::Unauthorized)
+                }
+                UnauthorizedErrorKind::TokenMissing => {
+                    HubError::create("Token is not found", None, Status::Unauthorized)
+                }
+                UnauthorizedErrorKind::Generic(e) => {
+                    HubError::create(e, None, Status::Unauthorized)
+                }
+            },
         }
     }
 
@@ -80,6 +87,21 @@ impl<'a> HubError {
 
     pub fn new_unprocessable(err: &str, d: Option<Vec<String>>) -> HubError {
         HubError::new(ErrorKind::Unprocessable(err, d))
+    }
+
+    pub fn new_unauthorized(err: &str, d: Option<Vec<String>>) -> HubError {
+        let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(err));
+        let mut error = HubError::new(kind);
+
+        d.and_then(|details| {
+            for v in details.iter() {
+                error.add(v.to_string());
+            }
+
+            Some(details)
+        });
+
+        return error;
     }
 
     // Добавить новый элемент в список деталей
@@ -106,7 +128,10 @@ impl<'a> RocketResponder<'a, 'static> for HubError {
 
 impl From<ValidationErrors> for HubError {
     fn from(errs: ValidationErrors) -> Self {
-        let mut error = HubError::new(ErrorKind::Unprocessable("Validation faild", Some(Vec::new())));
+        let mut error = HubError::new(ErrorKind::Unprocessable(
+            "Validation faild",
+            Some(Vec::new()),
+        ));
 
         for (k, v) in errs.field_errors() {
             for err in v {
