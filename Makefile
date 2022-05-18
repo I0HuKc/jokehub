@@ -36,6 +36,7 @@ endef
 .PHONY: \
 	down-backend \
 	build-backend \
+	lib-build \
 	run-backend \
 	count-backend \
 	config-backend \
@@ -96,6 +97,9 @@ test-backend:
 run-backend: build-backend
 	$(shell $(call base_docker_cmd, $(DOCKER_DIR),$(DOCKER_ENV))) up
 
+# Компиляция библиотеки
+lib-build:
+	cd backend/lib && cargo build
 
 # Компиляция сервера
 build-backend: env

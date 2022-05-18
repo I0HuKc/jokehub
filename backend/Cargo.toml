@@ -25,6 +25,8 @@ r2d2_redis = "0.14.0"
 strum = "0.24.0"
 strum_macros = "0.24"
 
+shrimplib = { path = "./lib" }
+
 [dependencies.mongodb]
 version = "2.0.0"
 default-features = false
