@@ -6,6 +6,9 @@ ARG BUILD_ARGS
 RUN USER=root cargo new --bin jokehub
 WORKDIR /jokehub
 
+# Копирую библиотеку
+COPY ./backend/lib ./lib
+
 # Копирую манифесты
 COPY ./backend/Cargo.lock ./Cargo.lock
 COPY ./backend/Cargo.toml ./Cargo.toml
