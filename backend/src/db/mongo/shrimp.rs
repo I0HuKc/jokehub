@@ -11,7 +11,7 @@ use crate::{
 impl<'a, T> Crud<'a, Shrimp<T>> for Shrimp<T>
 where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,
-    T: Paws<T>,
+    T: Paws,
 {
     fn create(
         collection: Collection<Document>,

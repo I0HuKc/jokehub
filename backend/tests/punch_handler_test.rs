@@ -1,117 +1,92 @@
-use rocket::http::{ContentType, Status};
+use common::{accounts::TestPadawan, punch::TestNewPunch};
+use rocket::http::{ContentType, Header, Status};
 
 mod common;
 
 #[test]
 fn get_punch() {
+    let path: &str = "/v1/punch/";
     let client = common::test_client().lock().unwrap();
 
-    // Создание тестовой записи
-    let resp = client
-        .post("/v1/punch/new")
-        .header(ContentType::JSON)
-        .body(json_string!({
-            "language": "ru",
-            "setup": "setup text",
-            "punchline": "punchline text"
-        }))
-        .dispatch();
+    let padawan = TestPadawan::default();
+    let punch = TestNewPunch::default();
 
-    assert_eq!(resp.status(), Status::Ok);
+    // Создаю запись
+    match common::try_login(&client, Box::new(padawan)) {
+        Ok(tokens) => {
+            // Создаю запись
+            let header = Header::new("Authorization", format!("Bearer {}", tokens.access_token));
 
-    let value = common::response_json_value(resp);
-    let id = value
-        .get("id")
-        .expect("must have a 'id' field")
-        .as_str()
-        .expect("must have 'id' value in str format");
+            let resp = client
+                .post(format!("{}/new", path))
+                .header(header)
+                .header(ContentType::JSON)
+                .body(json_string!({
+                    "setup": punch.setup,
+                    "punchline": punch.punchline,
+                    "language": "ru"
+                }))
+                .dispatch();
 
-    println!("{}", id);
+            assert_eq!(resp.status(), Status::Ok);
 
-    // Получение записи
-    let test_cases: Vec<(&str, &str, Status)> = vec![
-        (
-            "invalid fotmat_1",
-            "some_invalid_id",
-            Status::UnprocessableEntity,
-        ),
-        (
-            "invalid fotmat_2",
-            "b7b24959-3aa3-461a-a01a-c805697deeb",
-            Status::UnprocessableEntity,
-        ),
-        ("valid", id, Status::Ok),
-    ];
+            let value = common::response_json_value(resp);
 
-    for tc in test_cases {
-        let resp = client
-            .get(format!("/v1/punch/{}", tc.1))
-            .header(ContentType::JSON)
-            .dispatch();
+            let pid = value
+                .get("id")
+                .expect("must have a 'id' field")
+                .as_str()
+                .expect("must have 'id' value in str format");
 
-        assert_eq!(resp.status(), tc.2, "{}", tc.0);
+            // Получение записи
+            {
+                let resp = client.get(format!("{}/{}", path, pid)).dispatch();
+                assert_eq!(resp.status(), Status::Ok);
+            }
 
-        if resp.status() != tc.2 {
-            println!("{:?}", common::response_json_value(resp));
+            // Получение по неправильному uuid
+            {
+                let resp = client.get(format!("{}/invalid-format", path)).dispatch();
+                assert_eq!(resp.status(), Status::UnprocessableEntity); 
+            }
+
+            // Получение не существующей записи
+            {
+                let resp = client.get(format!("{}/fe16b7b2-54cc-45d0-8162-7819f463f5d4", path)).dispatch();
+                assert_eq!(resp.status(), Status::NotFound);
+            }
         }
-    }
+
+        Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    };
 }
 
 #[test]
 fn create_punch() {
+    let path: &str = "/v1/punch/new";
     let client = common::test_client().lock().unwrap();
 
-    let test_cases: Vec<(&str, String, Status)> = vec![
-        (
-            "invalid language [type]",
-            json_string!({
-                "language": "es",
-                "setup": "Как каннибал называет Пашу?",
-                "punchline": "Паштет"
-            }),
-            Status::UnprocessableEntity,
-        ),
-        (
-            "invalid language [lenght]",
-            json_string!({
-                "language": "ruu",
-                "setup": "Как каннибал называет Пашу?",
-                "punchline": "Паштет"
-            }),
-            Status::UnprocessableEntity,
-        ),
-        (
-            "valid with empty tags",
-            json_string!({
-                "language": "ru",
-                "setup": "Как каннибал называет Пашу?",
-                "punchline": "Паштет"
-            }),
-            Status::Ok,
-        ),
-        (
-            "valid",
-            json_string!({
-                "tags": ["meme"],
-                "language": "ru",
-                "setup": "Знаешь какую статью присудили карлику?",
-                "punchline": "Мелкое хулиганство"
-            }),
-            Status::Ok,
-        ),
-    ];
+    let padawan = TestPadawan::default();
+    let punch = TestNewPunch::default();
 
-    for tc in test_cases {
-        let resp = client
-            .post("/v1/punch/new")
-            .header(ContentType::JSON)
-            .body(tc.1)
-            .dispatch();
+    match common::try_login(&client, Box::new(padawan)) {
+        Ok(tokens) => {
+            let header = Header::new("Authorization", format!("Bearer {}", tokens.access_token));
 
-        assert_eq!(resp.status(), tc.2, "{}", tc.0);
+            let resp = client
+                .post(format!("{}", path))
+                .header(header)
+                .header(ContentType::JSON)
+                .body(json_string!({
+                    "setup": punch.setup,
+                    "punchline": punch.punchline,
+                    "language": "ru"
+                }))
+                .dispatch();
 
-        if resp.status() != tc.2 {
-            println!("{:?}", common::response_json_value(resp));
+            assert_eq!(resp.status(), Status::Ok)
         }
+
+        Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
     }
 }

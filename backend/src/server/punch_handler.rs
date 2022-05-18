@@ -12,18 +12,19 @@ use crate::{
     model::{
         uuid_validation,
         punch::*,
+        account::security::AuthGuard,
         shrimp::{Flags, Shrimp, Tail},
     },
 };
 
 #[post("/punch/new", data = "<jnp>")]
-pub async fn create_punch<'f>(client: MongoConn<'f>, jnp: Json<NewPunch>) -> Result<Value, HubError> {
+pub async fn create_punch<'f>(_auth: AuthGuard, client: MongoConn<'f>, jnp: Json<NewPunch>) -> Result<Value, HubError> {
     jnp.0.validate()?;
     
     let tail = Tail::new(
         Flags::default(), 
         &jnp.0.language, 
-        String::from("I0HuKc"), 
+        _auth.0.get_username(), 
         &jnp.0.tags,
     );
     let body = Punch::new(&jnp);

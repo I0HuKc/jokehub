@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use chrono::Utc;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::ValidationError;
@@ -124,12 +125,12 @@ where
     pub tail: Tail,
 }
 
-pub trait Paws<B> {}
+pub trait Paws {}
 
 impl<B> Shrimp<B>
 where
     B: Serialize,
-    B: Paws<B>,
+    B: Paws,
 {
     pub fn new(body: B, tail: Tail) -> Self {
         Shrimp {
@@ -137,6 +138,50 @@ where
             head: Head::new(),
             body,
             tail,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use test_case::test_case;
+
+    #[test_case(
+        "fr",
+        false ;
+        "unsupported_lang"
+    )]
+    #[test_case(
+        "russian",
+        false ;
+        "invalid_lang_format"
+    )]
+    #[test_case(
+        "ru",
+        true ;
+        "valid_ru"
+    )]
+    #[test_case(
+        "en",
+        true ;
+        "valid_en"
+    )]
+    fn test_validate_lang(lang: &str, is_valid: bool) {
+        match super::validate_lang(lang) {
+            Ok(_) => {
+                if is_valid {
+                    assert!(true)
+                } else {
+                    assert!(false)
+                }
+            }
+            Err(_) => {
+                if !is_valid {
+                    assert!(true)
+                } else {
+                    assert!(false)
+                }
+            }
         }
     }
 }

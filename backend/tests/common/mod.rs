@@ -1,4 +1,5 @@
 pub mod accounts;
+pub mod punch;
 
 use once_cell::sync::OnceCell;
 use rocket::http::{ContentType, Status};
@@ -81,6 +82,7 @@ macro_rules! json_string {
     };
 }
 
+#[allow(dead_code)]
 pub fn test_client() -> &'static Mutex<Client> {
     static INSTANCE: OnceCell<Mutex<Client>> = OnceCell::new();
 
