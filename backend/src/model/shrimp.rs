@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::ValidationError;
 
+use super::account::Tariff;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Head {
     pub counter: usize,
@@ -111,6 +113,7 @@ impl Tail {
 pub struct Shrimp<B>
 where
     B: Serialize,
+    B: Paws,
 {
     #[serde(rename = "_id")]
     pub id: String,
@@ -123,6 +126,9 @@ where
 
     #[serde(rename = "_meta-data")]
     pub tail: Tail,
+
+    #[serde(skip)]
+    _access_level: Tariff,
 }
 
 pub trait Paws {}
@@ -138,6 +144,7 @@ where
             head: Head::new(),
             body,
             tail,
+            _access_level: Tariff::default(),
         }
     }
 }

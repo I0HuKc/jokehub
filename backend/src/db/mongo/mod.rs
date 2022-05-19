@@ -5,7 +5,7 @@ pub mod varys;
 use mongodb::{
     bson::{doc, Document},
     options::ClientOptions,
-    results::InsertOneResult,
+    results::{DeleteResult, InsertOneResult},
     sync::Client,
     sync::Collection,
 };
@@ -81,5 +81,11 @@ where
             Some(value) => Ok(value),
             None => Err(HubError::new_not_found(ERR_NOT_FOUND.as_ref(), None)),
         }
+    }
+
+    fn del_by_id(collection: Collection<T>, id: &str) -> Result<DeleteResult, HubError> {
+        let result = collection.delete_one(doc! {"_id": id}, None)?;
+
+        Ok(result)
     }
 }

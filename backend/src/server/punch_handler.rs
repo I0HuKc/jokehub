@@ -3,10 +3,13 @@ use rocket::serde::json::Json;
 use serde_json::{json, Value};
 use validator::Validate;
 
+// #[macro_use]
+// use crate::errors;
+
 use crate::{
     db::mongo::MongoConn,
     db::mongo::{varys::Varys, Crud},
-    errors::HubError,
+    errors::HubError, err_not_found
 };
 use crate::{
     model::{
@@ -48,4 +51,18 @@ pub async fn get_punch<'f>(client: MongoConn<'f>, id: &str) -> Result<Json<Shrim
     )?;
 
     Ok(Json(result))
+}
+
+#[delete("/punch/<id>")]
+pub async fn delete_punch<'f>(_auth: AuthGuard, client: MongoConn<'f>, id: &str) -> Result<(), HubError> {
+    Shrimp::<Punch>::del_by_id(
+        Varys::get(client, Varys::Punch),
+        id
+    ).and_then(|d_result| {
+        if d_result.deleted_count < 1 {
+            Err(err_not_found!("punch"))
+        } else {
+            Ok(())
+        }
+    })  
 }

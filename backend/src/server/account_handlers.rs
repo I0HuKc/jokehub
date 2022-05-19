@@ -9,6 +9,7 @@ use crate::{
     db::mongo::MongoConn,
     db::mongo::{varys::Varys, Crud},
     db::redis::RedisConn,
+    err_internal, err_not_found, err_unauthorized,
     errors::HubError,
     model::account::{
         security::{AuthGuard, RefreshClaims, RefreshResp, Tokens},
@@ -52,14 +53,11 @@ pub async fn login<'f>(
                 result.username.clone(),
                 60 * 60 * 24 * 7,
             )
-            .map_err(|err| {
-                HubError::new_internal("Falid to set in redis", Some(Vec::new()))
-                    .add(format!("{}", err))
-            })?;
+            .map_err(|err| err_internal!("Falid to set in redis", err))?;
 
         Ok(Json(tokens))
     } else {
-        Err(HubError::new_not_found("User was not found", None))
+        Err(err_not_found!("user"))
     }
 }
 
@@ -85,16 +83,11 @@ pub fn refresh_token<'f>(
     // Удаляю старый токен
     redis
         .del::<&str, usize>(jrt.0.refresh_token)
-        .map_err(|err| {
-            HubError::new_unauthorized("Falid to drop token", Some(Vec::new()))
-                .add(format!("{}", err))
-        })
+        .map_err(|err| err_unauthorized!("Falid to drop token", err))
         .and_then(|res| {
             // Если токена не существовало
             if res != 1 {
-                let err = HubError::new_unauthorized("Token is not found", None);
-
-                Err(err)
+                Err(err_unauthorized!("Token is not found"))
             } else {
                 Ok(())
             }
@@ -124,16 +117,11 @@ pub fn logout<'f>(
     // Удаляю токен
     redis
         .del::<&str, usize>(jrt.0.refresh_token)
-        .map_err(|err| {
-            HubError::new_unauthorized("Falid to drop token", Some(Vec::new()))
-                .add(format!("{}", err))
-        })
+        .map_err(|err| err_unauthorized!("Falid to drop token", err))
         .and_then(|res| {
             // Если токена не существовало
             if res != 1 {
-                let err = HubError::new_unauthorized("Token is not found", None);
-
-                Err(err)
+                Err(err_unauthorized!("Token is not found"))
             } else {
                 Ok(())
             }
@@ -144,14 +132,13 @@ pub fn logout<'f>(
 
 #[delete("/account/delete")]
 pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(), HubError> {
-    User::del_by_username(
-        Varys::get(client, Varys::Users),
-        _auth.0.get_username()
-    ).and_then(|d_result| {
-        if d_result.deleted_count < 1 {
-            Err(HubError::new_not_found("User was not found", None))
-        } else {
-            Ok(())
-        }
-    })
+    User::del_by_username(Varys::get(client, Varys::Users), _auth.0.get_username()).and_then(
+        |d_result| {
+            if d_result.deleted_count < 1 {
+                Err(err_not_found!("user"))
+            } else {
+                Ok(())
+            }
+        },
+    )
 }

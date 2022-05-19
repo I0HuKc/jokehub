@@ -50,6 +50,12 @@ pub enum Tariff {
     Enterprice,
 }
 
+impl Default for Tariff {
+    fn default() -> Self {
+        Tariff::Free
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
     #[serde(rename = "_id")]

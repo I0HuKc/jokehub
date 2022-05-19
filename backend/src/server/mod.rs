@@ -7,7 +7,8 @@ mod punch_handler;
 
 use crate::{
     db::DbManage,
-    errors::{message::ERR_NOT_FOUND, ErrorKind, HubError, UnauthorizedErrorKind},
+    err_not_found,
+    errors::{ErrorKind, HubError, UnauthorizedErrorKind},
 };
 
 use {
@@ -32,6 +33,7 @@ pub fn rocket() -> _ {
                 get_anecdote,
                 create_punch,
                 get_punch,
+                delete_punch,
                 registration,
                 login,
                 account,
@@ -45,7 +47,7 @@ pub fn rocket() -> _ {
 
 #[catch(404)]
 fn not_found() -> HubError {
-    HubError::new_not_found(ERR_NOT_FOUND.as_ref(), None)
+    err_not_found!("page", "some det", "dfddg")
 }
 
 #[catch(500)]
