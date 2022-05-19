@@ -30,8 +30,8 @@ pub struct NewPunch {
     pub language: String,
 }
 
-impl Punch {
-    pub fn new(np: &NewPunch) -> Self {
+impl From<NewPunch> for Punch {
+    fn from(np: NewPunch) -> Self {
         Punch {
             setup: np.setup.to_string(),
             punchline: np.punchline.to_string(),

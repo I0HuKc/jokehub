@@ -19,7 +19,7 @@ pub async fn create_anecdote<'f>(client: MongoConn<'f>, jna: Json<NewAnecdote>) 
         String::from("I0HuKc"),
         &jna.0.tags,
     );
-    let body = Anecdote::new(&jna.0);
+    let body = Anecdote::from(jna.0);
 
     let result = Shrimp::create(
         Varys::get(client, Varys::Anecdote),

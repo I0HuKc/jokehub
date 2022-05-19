@@ -197,9 +197,9 @@ pub mod security {
                 .and_hms_milli(exp.hour(), exp.minute(), exp.second(), 0);
 
             RefreshClaims {
-                refresh_uuid: Uuid::new_v4(),               
+                refresh_uuid: Uuid::new_v4(),
                 username: ac.get_username(),
-                exp,             
+                exp,
             }
         }
 
@@ -347,5 +347,41 @@ pub mod security {
     #[derive(Debug, Clone, Deserialize)]
     pub struct RefreshResp<'a> {
         pub refresh_token: &'a str,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use test_case::test_case;
+    use validator::Validate;
+
+    #[test_case("I0", "12344321e", false ; "username_lenght_min" )]
+    #[test_case("1234567890123456", "12344321e", false ; "username_lenght_max" )]
+    #[test_case("I0H uKc", "12344321e", false ; "invalid_format" )]
+    #[test_case("I0HuKc", "1234", false ; "password_lenght_min" )]
+    #[test_case("I0HuKc", "123456789012345678901234567890", false ; "password_lenght_max" )]
+    #[test_case("I0HuKc", "12344321e", true ; "valid" )]
+    fn new_user_validation(username: &str, password: &str, is_valid: bool) {
+        let nu = super::NewUser {
+            username: username.to_string(),
+            password: password.to_string(),
+        };
+
+        match nu.validate() {
+            Ok(_) => {
+                if is_valid {
+                    assert!(true)
+                } else {
+                    assert!(false)
+                }
+            }
+            Err(_) => {
+                if !is_valid {
+                    assert!(true)
+                } else {
+                    assert!(false)
+                }
+            }
+        }
     }
 }

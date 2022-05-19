@@ -25,8 +25,8 @@ pub struct NewAnecdote {
     pub language: String,
 }
 
-impl Anecdote {
-    pub fn new(na: &NewAnecdote) -> Self {
+impl From<NewAnecdote> for Anecdote {
+    fn from(na: NewAnecdote) -> Self {
         Anecdote {
             text: na.text.to_string(),
             category: String::from("anecdote"),

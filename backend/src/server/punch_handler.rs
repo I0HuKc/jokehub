@@ -27,7 +27,7 @@ pub async fn create_punch<'f>(_auth: AuthGuard, client: MongoConn<'f>, jnp: Json
         _auth.0.get_username(), 
         &jnp.0.tags,
     );
-    let body = Punch::new(&jnp);
+    let body = Punch::from(jnp.0);
 
     let result = Shrimp::create(
         Varys::get(client, Varys::Punch),

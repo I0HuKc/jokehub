@@ -2,7 +2,6 @@ mod common;
 
 use rocket::http::{ContentType, Header, Status};
 use rocket::local::blocking::Client;
-use test_case::test_case;
 use uuid::Uuid;
 
 use common::{accounts::TestPadawan, response_json_value};
@@ -11,154 +10,51 @@ use jokehub::model::account::{
     Tariff, UserResp,
 };
 
-#[test_case(
-    json_string!({
-        "username": "I0H uKc",
-        "password": "12344321e"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid username format"
-)]
-#[test_case(
-    json_string!({
-        "username": "I0",
-        "password": "12344321e"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid username lenght [min]"
-)]
-#[test_case(
-    json_string!({
-        "username": "1234567890123456",
-        "password": "12344321e"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid username lenght [max]"
-)]
-#[test_case(
-    json_string!({
-        "username": "I0HuKc",
-        "password": "1234567"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid password lenght [min]"
-)]
-#[test_case(
-    json_string!({
-        "username": "I0HuKc",
-        "password": "123456789012345678901234567890"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid password lenght [max]"
-)]
-fn login(body: String, status: Status) {
+#[test]
+fn login() {
     let path: &str = "/v1/login";
     let client = common::test_client().lock().unwrap();
 
     let resp = client
-        .post(path)
+        .post(format!("{}", path))
         .header(ContentType::JSON)
-        .body(body)
+        .body(json_string!({
+            "username": "I0HuKc",
+            "password": "1234password"
+        }))
         .dispatch();
 
-    let resp_status = resp.status();
-    let value = common::response_json_value(resp);
+    assert_eq!(resp.status(), Status::Ok);
 
-    assert_eq!(resp_status, status);
-
-    if resp_status == Status::Ok {
-        let access_token = value
-            .get("access_token")
-            .expect("must have an 'access_token' field")
-            .as_str();
-        match access_token {
-            Some(token) => assert_ne!("", token),
-            None => assert!(false),
-        }
-
-        let refresh_token = value
-            .get("refresh_token")
-            .expect("must have an 'refresh_token' field")
-            .as_str();
-        match refresh_token {
-            Some(token) => assert_ne!("", token),
-            None => assert!(false),
-        }
-    }
+    let value = response_json_value(resp).to_string();
+    let _: Tokens = serde_json::from_str(&value.as_str()).expect("login valid response");
 }
 
-#[test_case(
-    json_string!({
-        "username": "I0H uKc",
-        "password": "12344321e"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid username format"
-)]
-#[test_case(
-    json_string!({
-        "username": "I0",
-        "password": "12344321e"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid username lenght [min]"
-)]
-#[test_case(
-    json_string!({
-        "username": "3851d279-baa6-4f4c-8ace-c9d472ef2c5735ее56546",
-        "password": "12344321e"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid username lenght [max]"
-)]
-#[test_case(
-    json_string!({
-        "username": "I0HuKc",
-        "password": "1234567"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid password lenght [min]"
-)]
-#[test_case(
-    json_string!({
-        "username": "I0HuKc",
-        "password": "123456789012345678901234567890"
-    }),
-    Status::UnprocessableEntity ;
-    "invalid password lenght [max]"
-)]
-#[test_case(
-    json_string!({
-        "username": "I0HuKc",
-        "password": "12344321e"
-    }),
-    Status::Ok ;
-    "valid"
-)]
-fn registration(body: String, status: Status) {
+#[test]
+fn registration() {
     let path: &str = "/v1/registration";
     let client = common::test_client().lock().unwrap();
 
     let resp = client
         .post(path)
         .header(ContentType::JSON)
-        .body(body)
+        .body(json_string!({
+            "username": "I0HuKc",
+            "password": "1234password"
+        }))
         .dispatch();
 
-    let resp_status = resp.status();
+    assert_eq!(resp.status(), Status::Ok);
+
     let value = common::response_json_value(resp);
+    let user_id = value.get("id").expect("must have an 'id' field").as_str();
 
-    assert_eq!(resp_status, status);
-
-    if resp_status == Status::Ok {
-        let user_id = value.get("id").expect("must have an 'id' field").as_str();
-        match user_id {
-            Some(id) => match Uuid::parse_str(id) {
-                Ok(_) => assert!(true),
-                Err(_) => assert!(false),
-            },
-            None => assert!(false),
-        }
+    match user_id {
+        Some(id) => match Uuid::parse_str(id) {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false),
+        },
+        None => assert!(false),
     }
 }
 
