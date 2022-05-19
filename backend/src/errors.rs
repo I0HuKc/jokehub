@@ -11,6 +11,79 @@ use rocket::serde::json::Json;
 
 use message::*;
 
+#[macro_export]
+macro_rules! huberr {
+    ( $x:expr, $f:tt ) => {{
+        {
+            let text = format!("{}", ($x[0..1].to_uppercase() + &$x[1..]));
+            HubError::$f(text.as_str(), None)
+        }
+    }};
+
+    ( $x:expr, $f:tt, $( $d:expr ),+ ) => {{
+        {
+            let mut d_vec = Vec::new();
+            $(
+                d_vec.push(format!("{}", $d));
+            )*
+
+            let text = format!("{}", ($x[0..1].to_uppercase() + &$x[1..]));
+            HubError::$f(text.as_str(), Some(d_vec))
+        }
+    }}
+}
+
+#[macro_export]
+macro_rules! err_not_found {
+    ( $x:expr, $( $d:expr ),+ ) => {{
+        {
+            use crate::huberr;
+            huberr!(format!("{} was not found", $x), new_not_found, $( $d ),* )
+        }
+    }};
+
+    ( $x:expr ) => {{
+        {
+            use crate::huberr;
+            huberr!(format!("{} was not found", $x), new_not_found)
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! err_unauthorized {
+    ( $x:expr, $( $d:expr ),+ ) => {{
+        {
+            use crate::huberr;
+            huberr!($x, new_unauthorized, $( $d ),* )
+        }
+    }};
+
+    ( $x:expr ) => {{
+        {
+            use crate::huberr;
+            huberr!($x, new_unauthorized)
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! err_internal {
+    ( $x:expr, $( $d:expr ),+ ) => {{
+        {
+            use crate::huberr;
+            huberr!($x, new_internal, $( $d ),* )
+        }
+    }};
+
+    ( $x:expr ) => {{
+        {
+            use crate::huberr;
+            huberr!($x, new_internal)
+        }
+    }};
+}
+
 pub enum ErrorKind<'a> {
     Internal(&'a str, Option<Vec<String>>),
     Unprocessable(&'a str, Option<Vec<String>>),
@@ -77,19 +150,19 @@ impl<'a> HubError {
         return self.status;
     }
 
-    pub fn new_not_found(err: &str, d: Option<Vec<String>>) -> HubError {
+    pub(crate) fn new_not_found(err: &str, d: Option<Vec<String>>) -> HubError {
         HubError::new(ErrorKind::NotFound(err, d))
     }
 
-    pub fn new_internal(err: &str, d: Option<Vec<String>>) -> HubError {
+    pub(crate) fn new_internal(err: &str, d: Option<Vec<String>>) -> HubError {
         HubError::new(ErrorKind::Internal(err, d))
     }
 
-    pub fn new_unprocessable(err: &str, d: Option<Vec<String>>) -> HubError {
+    pub(crate) fn new_unprocessable(err: &str, d: Option<Vec<String>>) -> HubError {
         HubError::new(ErrorKind::Unprocessable(err, d))
     }
 
-    pub fn new_unauthorized(err: &str, d: Option<Vec<String>>) -> HubError {
+    pub(crate) fn new_unauthorized(err: &str, d: Option<Vec<String>>) -> HubError {
         let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(err));
         let mut error = HubError::new(kind);
 
@@ -180,6 +253,6 @@ pub mod message {
 
     lazy_static! {
         pub static ref ERR_ALREADY_EXISTS: &'static str = "Resource already exists";
-        pub static ref ERR_NOT_FOUND: &'static str = "Resource not found";
+        pub static ref ERR_NOT_FOUND: &'static str = "was not found";
     }
 }
