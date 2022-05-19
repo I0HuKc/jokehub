@@ -2,59 +2,57 @@ mod common;
 
 use rocket::http::{ContentType, Header, Status};
 use rocket::local::blocking::Client;
-use uuid::Uuid;
+use serde::Deserialize;
+use serde_json::Value;
 
-use common::{accounts::TestPadawan, response_json_value};
+use common::accounts::TestPadawan;
 use jokehub::model::account::{
     security::{AccessClaims, RefreshClaims, Tokens},
     Tariff, UserResp,
 };
 
-#[test]
-fn login() {
-    let path: &str = "/v1/login";
-    let client = common::test_client().lock().unwrap();
-
-    let resp = client
-        .post(format!("{}", path))
-        .header(ContentType::JSON)
-        .body(json_string!({
-            "username": "I0HuKc",
-            "password": "1234password"
-        }))
-        .dispatch();
-
-    assert_eq!(resp.status(), Status::Ok);
-
-    let value = response_json_value(resp).to_string();
-    let _: Tokens = serde_json::from_str(&value.as_str()).expect("login valid response");
-}
+use common::accounts as account;
 
 #[test]
-fn registration() {
-    let path: &str = "/v1/registration";
+fn auth() {
     let client = common::test_client().lock().unwrap();
 
-    let resp = client
-        .post(path)
-        .header(ContentType::JSON)
-        .body(json_string!({
-            "username": "I0HuKc",
-            "password": "1234password"
-        }))
-        .dispatch();
+    // Регистрация пользователя
+    {
+        #[derive(Deserialize, Debug)]
+        struct RegResp {
+            #[allow(dead_code)]
+            id: String,
+        }
 
-    assert_eq!(resp.status(), Status::Ok);
+        let path: &str = "/v1/registration";
+        let resp = client
+            .post(path)
+            .header(ContentType::JSON)
+            .body(json_string!({
+                "username": "I0HuKc",
+                "password": "1234password"
+            }))
+            .dispatch();
 
-    let value = common::response_json_value(resp);
-    let user_id = value.get("id").expect("must have an 'id' field").as_str();
+        assert_eq!(resp.status(), Status::Ok);
+        assert_body!(resp, RegResp);
+    }
 
-    match user_id {
-        Some(id) => match Uuid::parse_str(id) {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false),
-        },
-        None => assert!(false),
+    // Авторизация пользователя
+    {
+        let path: &str = "/v1/login";
+        let resp = client
+            .post(format!("{}", path))
+            .header(ContentType::JSON)
+            .body(json_string!({
+                "username": "I0HuKc",
+                "password": "1234password"
+            }))
+            .dispatch();
+
+        assert_eq!(resp.status(), Status::Ok);
+        assert_body!(resp, Tokens);
     }
 }
 
@@ -64,19 +62,19 @@ fn account_padawan() {
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::default();
 
-    match common::try_login(&client, Box::new(padawan)) {
+    match account::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
-            let header = Header::new("Authorization", format!("Bearer {}", tokens.access_token));
-            let resp = client.get(format!("{}", path)).header(header).dispatch();
+            let resp = client
+                .get(format!("{}", path))
+                .header(bearer!((tokens.access_token)))
+                .dispatch();
 
             assert_eq!(resp.status(), Status::Ok);
 
-            let value = response_json_value(resp).to_string();
-            let user_info: UserResp =
-                serde_json::from_str(&value.as_str()).expect("account valid response");
+            let body = assert_body!(resp, UserResp);
 
-            assert_eq!("upadawan", user_info.username);
-            assert_eq!(Tariff::Free, user_info.tariff);
+            assert_eq!("upadawan", body.username);
+            assert_eq!(Tariff::Free, body.tariff);
         }
 
         Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
@@ -89,7 +87,7 @@ fn refresh_token() {
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::default();
 
-    match common::try_login(&client, Box::new(padawan)) {
+    match account::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
             // Обновляю токен
             {
@@ -102,9 +100,7 @@ fn refresh_token() {
 
                 assert_eq!(resp.status(), Status::Ok);
 
-                let value = response_json_value(resp).to_string();
-                let body: Tokens =
-                    serde_json::from_str(&value.as_str()).expect("tokens valid response");
+                let body = assert_body!(resp, Tokens);
 
                 let access_payload =
                     Tokens::decode_token::<AccessClaims>(body.access_token.as_str())
@@ -141,15 +137,12 @@ fn logout() {
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::default();
 
-    match common::try_login(&client, Box::new(padawan)) {
+    match account::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
             fn login(client: &Client, tokens: &Tokens, path: &str) -> Status {
-                let header =
-                    Header::new("Authorization", format!("Bearer {}", tokens.access_token));
-
                 let resp = client
                     .post(format!("{}", path))
-                    .header(header)
+                    .header(bearer!((tokens.access_token)))
                     .body(json_string!({
                         "refresh_token": tokens.refresh_token
                     }))
@@ -175,10 +168,12 @@ fn delete_account() {
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::new("delpad", "somepassword");
 
-    match common::try_login(&client, Box::new(padawan)) {
+    match account::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
-            let header = Header::new("Authorization", format!("Bearer {}", tokens.access_token));
-            let resp = client.delete(format!("{}", path)).header(header).dispatch();
+            let resp = client
+                .delete(format!("{}", path))
+                .header(bearer!((tokens.access_token)))
+                .dispatch();
 
             assert_eq!(resp.status(), Status::Ok);
         }
@@ -188,7 +183,7 @@ fn delete_account() {
 }
 
 mod auth_guard {
-    use crate::{common, common::accounts::TestPadawan};
+    use crate::{common, common::accounts as account, common::accounts::TestPadawan};
     use rocket::http::{Header, Status};
 
     #[test]
@@ -197,7 +192,7 @@ mod auth_guard {
         let client = common::test_client().lock().unwrap();
         let padawan = TestPadawan::default();
 
-        match common::try_login(&client, Box::new(padawan)) {
+        match account::try_login(&client, Box::new(padawan)) {
             Ok(tokens) => {
                 let header = Header::new("Authorization", format!("{}", tokens.access_token));
 
@@ -218,7 +213,7 @@ mod auth_guard {
         let client = common::test_client().lock().unwrap();
         let padawan = TestPadawan::default();
 
-        match common::try_login(&client, Box::new(padawan)) {
+        match account::try_login(&client, Box::new(padawan)) {
             Ok(_) => {
                 let header = Header::new("Authorization", format!("Bearer"));
 
@@ -239,7 +234,7 @@ mod auth_guard {
         let client = common::test_client().lock().unwrap();
         let padawan = TestPadawan::default();
 
-        match common::try_login(&client, Box::new(padawan)) {
+        match account::try_login(&client, Box::new(padawan)) {
             Ok(_) => {
                 let resp = client.get(format!("{}", path)).dispatch();
 
@@ -258,12 +253,12 @@ mod auth_guard {
         let client = common::test_client().lock().unwrap();
         let padawan = TestPadawan::default();
 
-        match common::try_login(&client, Box::new(padawan)) {
+        match account::try_login(&client, Box::new(padawan)) {
             Ok(tokens) => {
-                let header =
-                    Header::new("Authorization", format!("Bearer {}", tokens.access_token));
-
-                let resp = client.get(format!("{}", path)).header(header).dispatch();
+                let resp = client
+                    .get(format!("{}", path))
+                    .header(crate::bearer!((tokens.access_token)))
+                    .dispatch();
 
                 assert_eq!(resp.status(), Status::Ok);
             }

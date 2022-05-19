@@ -1,3 +1,11 @@
+use rocket::http::{ContentType, Status};
+use rocket::local::blocking::Client;
+use serde_json::Value;
+
+use jokehub::model::account::security::Tokens;
+
+use crate::json_string;
+
 pub trait TestUser {
     fn get_username(&self) -> &str;
     fn get_password(&self) -> &str;
@@ -33,5 +41,70 @@ impl<'a> TestUser for TestPadawan<'a> {
 
     fn get_password(&self) -> &str {
         return self.password;
+    }
+}
+
+// Создать тестовый аккаунт
+#[allow(dead_code)]
+fn registration(client: &Client, username: &str, password: &str) -> Result<(), Value> {
+    let resp = client
+        .post("/v1/registration")
+        .header(ContentType::JSON)
+        .body(json_string!({
+            "username": username,
+            "password": password
+        }))
+        .dispatch();
+
+    if resp.status() != Status::Ok {
+        Err(super::response_json_value(resp))
+    } else {
+        Ok(())
+    }
+}
+
+// Авторизоваться
+#[allow(dead_code)]
+fn login(client: &Client, username: &str, password: &str) -> Result<Tokens, (Status, Value)> {
+    let resp = client
+        .post("/v1/login")
+        .header(ContentType::JSON)
+        .body(json_string!({
+            "username": username,
+            "password": password
+        }))
+        .dispatch();
+
+    if resp.status() != Status::Ok {
+        Err((resp.status(), super::response_json_value(resp)))
+    } else {
+        let value = super::response_json_value(resp).to_string();
+        let tokens: Tokens = serde_json::from_str(&value.as_str()).expect("login valid response");
+
+        Ok(tokens)
+    }
+}
+
+#[allow(dead_code)]
+pub fn try_login(client: &Client, user: Box<dyn TestUser>) -> Result<Tokens, Value> {
+    match login(client, user.get_username(), user.get_password()) {
+        // Если удалось авторизоваться возвращаю токены
+        Ok(tokens) => Ok(tokens),
+
+        Err((status, value)) => {
+            // Если ошибка не связана с тем, что пользователь не зареган
+            if status != Status::NotFound {
+                Err(value)
+            } else {
+                // Регистрирую пользователя
+                registration(client, user.get_username(), user.get_password())?;
+
+                // Пытаюсь авторизоваться еще раз
+                match login(client, user.get_username(), user.get_password()) {
+                    Ok(tokens) => Ok(tokens),
+                    Err((_, v)) => Err(v),
+                }
+            }
+        }
     }
 }
