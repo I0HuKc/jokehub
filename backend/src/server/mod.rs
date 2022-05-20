@@ -5,11 +5,7 @@ mod joke_handler;
 mod ping_handler;
 mod punch_handler;
 
-use crate::{
-    db::DbManage,
-    err_not_found,
-    errors::{ErrorKind, HubError, UnauthorizedErrorKind},
-};
+use crate::{db::DbManage, err_internal, err_not_found, err_unauthorized, errors::HubError};
 
 use {
     // use joke_handler::*;
@@ -47,16 +43,15 @@ pub fn rocket() -> _ {
 
 #[catch(404)]
 fn not_found() -> HubError {
-    err_not_found!("page", "some det", "dfddg")
+    err_not_found!("page")
 }
 
 #[catch(500)]
 fn internal() -> HubError {
-    HubError::new_internal("Opps, something went wrong...", None)
+    err_internal!("Opps, something went wrong...")
 }
 
 #[catch(401)]
 fn unauthorized() -> HubError {
-    let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic("Authorization required"));
-    HubError::new(kind)
+    err_unauthorized!("Authorization required")
 }
