@@ -84,10 +84,29 @@ macro_rules! err_internal {
     }};
 }
 
+#[macro_export]
+macro_rules! err_forbidden {
+    ( $( $d:expr ),+ ) => {{
+        {
+            use crate::{huberr, errors::message::ERR_NOT_ALLOWED};
+
+            huberr!(ERR_NOT_ALLOWED.clone(), new_forbidden, $( $d ),* )
+        }
+    }};
+
+    ( ) => {{
+        {
+            use crate::{huberr, errors::message::ERR_NOT_ALLOWED};
+            huberr!(ERR_NOT_ALLOWED.clone(), new_forbidden)
+        }
+    }};
+}
+
 pub enum ErrorKind<'a> {
     Internal(&'a str, Option<Vec<String>>),
     Unprocessable(&'a str, Option<Vec<String>>),
     NotFound(&'a str, Option<Vec<String>>),
+    Forbidden(&'a str, Option<Vec<String>>),
 
     Unauthorized(UnauthorizedErrorKind<'a>),
 }
@@ -129,6 +148,7 @@ impl<'a> HubError {
         match kind {
             ErrorKind::Internal(err, d) => HubError::create(err, d, Status::InternalServerError),
             ErrorKind::NotFound(err, d) => HubError::create(err, d, Status::NotFound),
+            ErrorKind::Forbidden(err, d) => HubError::create(err, d, Status::Forbidden),
             ErrorKind::Unprocessable(err, d) => {
                 HubError::create(err, d, Status::UnprocessableEntity)
             }
@@ -150,18 +170,27 @@ impl<'a> HubError {
         return self.status;
     }
 
+    #[allow(dead_code)]
     pub(crate) fn new_not_found(err: &str, d: Option<Vec<String>>) -> HubError {
         HubError::new(ErrorKind::NotFound(err, d))
     }
 
+    #[allow(dead_code)]
     pub(crate) fn new_internal(err: &str, d: Option<Vec<String>>) -> HubError {
         HubError::new(ErrorKind::Internal(err, d))
     }
 
+    #[allow(dead_code)]
     pub(crate) fn new_unprocessable(err: &str, d: Option<Vec<String>>) -> HubError {
         HubError::new(ErrorKind::Unprocessable(err, d))
     }
 
+    #[allow(dead_code)]
+    pub(crate) fn new_forbidden(err: &str, d: Option<Vec<String>>) -> HubError {
+        HubError::new(ErrorKind::Forbidden(err, d))
+    }
+
+    #[allow(dead_code)]
     pub(crate) fn new_unauthorized(err: &str, d: Option<Vec<String>>) -> HubError {
         let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(err));
         let mut error = HubError::new(kind);
@@ -254,5 +283,6 @@ pub mod message {
     lazy_static! {
         pub static ref ERR_ALREADY_EXISTS: &'static str = "Resource already exists";
         pub static ref ERR_NOT_FOUND: &'static str = "was not found";
+        pub static ref ERR_NOT_ALLOWED: &'static str = "Endpoint not available to you";
     }
 }
