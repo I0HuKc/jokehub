@@ -138,6 +138,7 @@ pub mod security {
     use uuid::Uuid;
 
     use crate::{
+        err_unauthorized,
         errors::{ErrorKind, HubError, UnauthorizedErrorKind},
         model::account::{Level, Tariff},
     };
@@ -278,6 +279,38 @@ pub mod security {
         }
     }
 
+    pub struct TariffGuard(pub Tariff, pub Option<HubError>);
+
+    #[rocket::async_trait]
+    impl<'r> FromRequest<'r> for TariffGuard {
+        type Error = HubError;
+
+        async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+            match request.headers().get_one("Authorization") {
+                Some(at) => {
+                    let split = at.split(" ");
+                    let vec = split.collect::<Vec<&str>>();
+
+                    if vec.len() != 2 {
+                        Outcome::Success(TariffGuard(
+                            Tariff::default(),
+                            Some(err_unauthorized!("Token is in invalid format")),
+                        ))
+                    } else {
+                        let token = Tokens::decode_token::<AccessClaims>(vec[1]);
+
+                        match token {
+                            Ok(t) => Outcome::Success(TariffGuard(t.claims.tariff, None)),
+                            Err(err) => Outcome::Success(TariffGuard(Tariff::default(), Some(err))),
+                        }
+                    }
+                }
+
+                None => Outcome::Success(TariffGuard(Tariff::default(), None)),
+            }
+        }
+    }
+
     #[derive(Clone, Serialize, Deserialize)]
     pub struct Tokens {
         pub access_token: String,
@@ -353,6 +386,38 @@ pub mod security {
     #[derive(Debug, Clone, Deserialize)]
     pub struct RefreshResp<'a> {
         pub refresh_token: &'a str,
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn token_creation() {
+            match super::Tokens::new(
+                String::from("I0HuKc"),
+                super::Level::Padawan,
+                super::Tariff::Basic,
+            ) {
+                Ok(tokens) => {
+                    let at = super::Tokens::decode_token::<super::AccessClaims>(
+                        tokens.access_token.as_str(),
+                    )
+                    .expect("valid access token");
+
+                    assert_eq!(at.claims.username, String::from("I0HuKc"));
+                    assert_eq!(at.claims.level, super::Level::Padawan);
+                    assert_eq!(at.claims.tariff, super::Tariff::Basic);
+
+                    let rt = super::Tokens::decode_token::<super::RefreshClaims>(
+                        tokens.refresh_token.as_str(),
+                    )
+                    .expect("valid access token");
+
+                    assert_eq!(rt.claims.username, String::from("I0HuKc"));
+                }
+
+                Err(err) => assert!(false, "{:?}", err),
+            }
+        }
     }
 }
 

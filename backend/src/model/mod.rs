@@ -15,9 +15,9 @@ lazy_static! {
     pub(crate) static ref SUPPORTED_LANGUAGES: Vec<&'static str> = ["ru", "en"].to_vec();
 }
 
-pub fn uuid_validation<'a>(id: &str) -> Result<(), HubError> {
+pub fn uuid_validation<'a>(id: &str) -> Result<&str, HubError> {
     match Uuid::parse_str(id) {
-        Ok(_) => Ok(()),
+        Ok(_) => Ok(id),
         Err(_) => Err(HubError::new_unprocessable("Invalid format of uuid", None)),
     }
 }

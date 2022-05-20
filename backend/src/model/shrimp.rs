@@ -1,9 +1,11 @@
-use chrono::NaiveDateTime;
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use uuid::Uuid;
 use validator::ValidationError;
+
+use crate::errors::HubError;
 
 use super::account::Tariff;
 
@@ -126,9 +128,6 @@ where
 
     #[serde(rename = "_meta-data")]
     pub tail: Tail,
-
-    #[serde(skip)]
-    _access_level: Tariff,
 }
 
 pub trait Paws {}
@@ -144,7 +143,53 @@ where
             head: Head::new(),
             body,
             tail,
-            _access_level: Tariff::default(),
+        }
+    }
+
+    pub fn tariffing(&self, tariff: Tariff, err: Option<HubError>) -> Value {
+        match tariff {
+            Tariff::Free => {
+                let mut base = json!(self.body);
+                Self::err_union(&mut base, err)
+            }
+            Tariff::Basic => {
+                let mut base = json!({"id": self.id});
+
+                Self::merge(&mut base, json!(self.body));
+                Self::merge(&mut base, json!({"_meta-data": self.tail}));
+
+                Self::err_union(&mut base, err)
+            }
+            Tariff::Standart => {
+                let mut base = json!(self);
+                Self::err_union(&mut base, err)
+            }
+            Tariff::Enterprice => {
+                let mut base = json!(self);
+                Self::err_union(&mut base, err)
+            }
+        }
+    }
+
+    fn merge(a: &mut Value, b: Value) {
+        match (a, b) {
+            (a @ &mut Value::Object(_), Value::Object(b)) => {
+                let a = a.as_object_mut().unwrap();
+                for (k, v) in b {
+                    Self::merge(a.entry(k).or_insert(Value::Null), v);
+                }
+            }
+            (a, b) => *a = b,
+        }
+    }
+
+    fn err_union(base: &mut Value, err: Option<HubError>) -> Value {
+        if let Some(e) = err {
+            Self::merge(base, json!({ "errors": e }));
+
+            base.clone()
+        } else {
+            base.clone()
         }
     }
 }
