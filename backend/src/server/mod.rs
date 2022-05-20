@@ -24,12 +24,15 @@ pub fn rocket() -> _ {
         .mount(
             "/v1",
             rocket::routes![
-                // create_joke,
+                // Punch methods
                 create_anecdote,
                 get_anecdote,
+                delete_anecdote,
+                // Punch methods
                 create_punch,
                 get_punch,
                 delete_punch,
+                // Accounts methods
                 registration,
                 login,
                 account,
