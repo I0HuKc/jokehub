@@ -131,6 +131,7 @@ pub mod security {
     use chrono::prelude::*;
     use jsonwebtoken::TokenData;
     use jsonwebtoken::{errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Validation};
+    use rocket::http::Status;
     use rocket::{
         request, request::FromRequest, request::Outcome, serde::DeserializeOwned, Request,
     };
@@ -138,7 +139,7 @@ pub mod security {
     use uuid::Uuid;
 
     use crate::{
-        err_unauthorized,
+        err_forbidden, err_unauthorized,
         errors::{ErrorKind, HubError, UnauthorizedErrorKind},
         model::account::{Level, Tariff},
     };
@@ -240,6 +241,7 @@ pub mod security {
         }
     }
 
+    #[derive(Debug)]
     pub struct AuthGuard(pub AccessClaims);
 
     #[rocket::async_trait]
@@ -308,6 +310,46 @@ pub mod security {
 
                 None => Outcome::Success(TariffGuard(Tariff::default(), None)),
             }
+        }
+    }
+
+    /// Охранник требующий уровени доступа не ниже чем Master
+    /// Включает в себя прохожение через общий охранник авторизации
+    pub struct MasterGuard(pub AccessClaims);
+
+    #[rocket::async_trait]
+    impl<'r> FromRequest<'r> for MasterGuard {
+        type Error = HubError;
+
+        async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+            request
+                .guard::<AuthGuard>()
+                .await
+                .and_then(|d| match d.0.level {
+                    Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
+                    Level::Master => Outcome::Success(MasterGuard(d.0)),
+                    Level::Sith => Outcome::Success(MasterGuard(d.0)),
+                })
+        }
+    }
+
+    /// Охранник требующий уровени доступа не ниже чем Master
+    /// Включает в себя прохожение через общий охранник авторизации
+    pub struct SithGuard(pub AccessClaims);
+
+    #[rocket::async_trait]
+    impl<'r> FromRequest<'r> for SithGuard {
+        type Error = HubError;
+
+        async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+            request
+                .guard::<AuthGuard>()
+                .await
+                .and_then(|d| match d.0.level {
+                    Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
+                    Level::Master => Outcome::Failure((Status::Forbidden, err_forbidden!())),
+                    Level::Sith => Outcome::Success(SithGuard(d.0)),
+                })
         }
     }
 
