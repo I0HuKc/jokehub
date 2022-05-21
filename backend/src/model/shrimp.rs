@@ -3,12 +3,12 @@ use chrono::{NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
-use validator::ValidationError;
 
 use crate::errors::HubError;
 
 use super::account::Tariff;
 
+/// Заголовок любой записи контента
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Head {
     pub counter: usize,
@@ -24,6 +24,7 @@ impl Head {
     }
 }
 
+/// Флаги деликатности контента
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Flags {
     pub religious: bool,
@@ -51,7 +52,7 @@ impl Flags {
         }
     }
 
-    // Переключатели
+    // Переключатели деликатности контента
 
     pub fn religious_coup(&mut self) -> Self {
         self.religious = !self.religious;
@@ -90,16 +91,6 @@ pub(crate) fn default_tags() -> Vec<String> {
     return vec![String::from("general")];
 }
 
-pub(crate) fn validate_lang(lang: &str) -> Result<(), ValidationError> {
-    for l in super::SUPPORTED_LANGUAGES.clone() {
-        if lang == l {
-            return Ok(());
-        }
-    }
-
-    return Err(ValidationError::new("custom"));
-}
-
 impl Tail {
     pub fn new(flags: Flags, lang: &String, author: String, tags: &Vec<String>) -> Self {
         Tail {
@@ -111,6 +102,10 @@ impl Tail {
     }
 }
 
+/// Общее тело для любого текстового контента.
+/// В зависимости от пользовательского тарифа в ответе доступны те или иные поля.
+/// Тариф определяется исходя из токена в заголовке запроса.
+/// Если токен отсутствует сериализация контента согласно тарифу Free.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Shrimp<B>
 where
@@ -146,6 +141,7 @@ where
         }
     }
 
+    /// Сериализация контента согласно пользовательскому тарифу
     pub fn tariffing(&self, tariff: Tariff, err: Option<HubError>) -> Value {
         match tariff {
             Tariff::Free => {
@@ -171,6 +167,7 @@ where
         }
     }
 
+    /// Быстрое слияние json объектов
     fn merge(a: &mut Value, b: Value) {
         match (a, b) {
             (a @ &mut Value::Object(_), Value::Object(b)) => {
@@ -183,6 +180,7 @@ where
         }
     }
 
+    /// Слияние базового json объекта и объекта ошибок (если они возникли)
     fn err_union(base: &mut Value, err: Option<HubError>) -> Value {
         if let Some(e) = err {
             Self::merge(base, json!({ "errors": e }));
@@ -219,7 +217,7 @@ mod tests {
         "valid_en"
     )]
     fn test_validate_lang(lang: &str, is_valid: bool) {
-        match super::validate_lang(lang) {
+        match crate::model::validation::validate_lang(lang) {
             Ok(_) => {
                 if is_valid {
                     assert!(true)

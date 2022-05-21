@@ -10,7 +10,7 @@ use crate::model::{
     account::security::{AuthGuard, TariffGuard, MasterGuard},
     punch::*,
     shrimp::{Flags, Shrimp, Tail},
-    uuid_validation,
+    validation::uuid_validation,
 };
 use crate::{
     db::mongo::MongoConn,
@@ -53,7 +53,7 @@ pub async fn get_punch<'f>(_tariff: TariffGuard, client: MongoConn<'f>, id: &str
 
 #[delete("/punch/<id>")]
 pub async fn delete_punch<'f>(
-    _auth: MasterGuard,
+    _level: MasterGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<(), HubError> {

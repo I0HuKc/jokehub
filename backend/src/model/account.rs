@@ -7,7 +7,7 @@ use strum_macros::EnumIter;
 use uuid::Uuid;
 use validator::Validate;
 
-use super::validate_query;
+use super::validation::validate_query;
 use crate::errors::HubError;
 
 /// Тело запроса при регистрации пользователя

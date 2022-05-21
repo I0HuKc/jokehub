@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use shrimplib::Paws;
 
-use crate::model::shrimp::{default_tags, validate_lang, Paws};
+use crate::model::{
+    shrimp::{default_tags, Paws},
+    validation::validate_lang,
+};
 use validator::Validate;
 
 #[derive(Clone, Serialize, Deserialize, Paws)]

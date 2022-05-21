@@ -16,7 +16,8 @@ use crate::{
             security::{AuthGuard, RefreshClaims, RefreshResp, SithGuard, Tokens},
             validation::level_validation,
             *,
-        },        
+        },
+        validation::query_validation,
     },
 };
 
@@ -155,7 +156,7 @@ pub async fn privilege<'f>(
 ) -> Result<(), HubError> {
     User::privilege_set(
         Varys::get(client, Varys::Users),
-        username,
+        query_validation(username)?,
         level_validation(level)?,
     )
     .and_then(|up_result| {
