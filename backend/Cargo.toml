@@ -27,6 +27,11 @@ strum_macros = "0.24"
 
 shrimplib = { path = "./lib" }
 
+[dependencies.lingua]
+version = "1.4.0"
+default-features = false
+features = ["russian", "english"]
+
 [dependencies.mongodb]
 version = "2.0.0"
 default-features = false
