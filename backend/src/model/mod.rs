@@ -41,14 +41,4 @@ pub mod validation {
             return Err(ValidationError::new("username"));
         }
     }
-
-    pub(crate) fn validate_lang(lang: &str) -> Result<(), ValidationError> {
-        for l in crate::model::SUPPORTED_LANGUAGES.clone() {
-            if lang == l {
-                return Ok(());
-            }
-        }
-
-        return Err(ValidationError::new("custom"));
-    }
 }

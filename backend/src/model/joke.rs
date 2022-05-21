@@ -3,7 +3,6 @@ use validator::Validate;
 
 use crate::model::{
     shrimp::{default_tags, Paws},
-    validation::validate_lang,
 };
 use shrimplib::Paws;
 
@@ -20,12 +19,6 @@ pub struct NewJoke {
 
     #[serde(default = "default_tags")]
     pub tags: Vec<String>,
-
-    #[validate(
-        length(equal = 2, message = "Invalid length"),
-        custom(function = "validate_lang", message = "Unknown type")
-    )]
-    pub language: String,
 }
 
 impl From<NewJoke> for Joke {

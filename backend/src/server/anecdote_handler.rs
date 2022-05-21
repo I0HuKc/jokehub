@@ -12,17 +12,19 @@ use crate::{
         shrimp::{Flags, Shrimp, Tail},
         validation::uuid_validation,
     },
+    server::lingua::Lingua,
 };
 
 #[post("/anecdote/new", data = "<jna>")]
 pub async fn create_anecdote<'f>(
     _auth: AuthGuard,
     client: MongoConn<'f>,
+    lingua: Lingua<'f>,
     jna: Json<NewAnecdote>,
 ) -> Result<Value, HubError> {
     let tail = Tail::new(
         Flags::default(),
-        &jna.0.language,
+        lingua.detected(jna.clone().0.text)?,
         _auth.0.get_username(),
         &jna.0.tags,
     );

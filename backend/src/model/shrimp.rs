@@ -1,5 +1,6 @@
 use chrono::{NaiveDateTime, Utc};
 
+use lingua::IsoCode639_1;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -92,7 +93,7 @@ pub(crate) fn default_tags() -> Vec<String> {
 }
 
 impl Tail {
-    pub fn new(flags: Flags, lang: &String, author: String, tags: &Vec<String>) -> Self {
+    pub fn new(flags: Flags, lang: IsoCode639_1, author: String, tags: &Vec<String>) -> Self {
         Tail {
             flags,
             lang: lang.to_string(),
@@ -188,50 +189,6 @@ where
             base.clone()
         } else {
             base.clone()
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use test_case::test_case;
-
-    #[test_case(
-        "fr",
-        false ;
-        "unsupported_lang"
-    )]
-    #[test_case(
-        "russian",
-        false ;
-        "invalid_lang_format"
-    )]
-    #[test_case(
-        "ru",
-        true ;
-        "valid_ru"
-    )]
-    #[test_case(
-        "en",
-        true ;
-        "valid_en"
-    )]
-    fn test_validate_lang(lang: &str, is_valid: bool) {
-        match crate::model::validation::validate_lang(lang) {
-            Ok(_) => {
-                if is_valid {
-                    assert!(true)
-                } else {
-                    assert!(false)
-                }
-            }
-            Err(_) => {
-                if !is_valid {
-                    assert!(true)
-                } else {
-                    assert!(false)
-                }
-            }
         }
     }
 }

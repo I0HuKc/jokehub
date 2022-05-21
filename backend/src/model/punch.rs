@@ -2,10 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use shrimplib::Paws;
 
-use crate::model::{
-    shrimp::{default_tags, Paws},
-    validation::validate_lang,
-};
+use crate::model::shrimp::{default_tags, Paws};
 use validator::Validate;
 
 #[derive(Clone, Serialize, Deserialize, Paws)]
@@ -25,12 +22,6 @@ pub struct NewPunch {
 
     #[serde(default = "default_tags")]
     pub tags: Vec<String>,
-
-    #[validate(
-        length(equal = 2, message = "Invalid length"),
-        custom(function = "validate_lang", message = "Unknown type")
-    )]
-    pub language: String,
 }
 
 impl From<NewPunch> for Punch {
@@ -71,7 +62,6 @@ mod tests {
             setup: setup.to_string(),
             punchline: punchline.to_string(),
             tags: vec![],
-            language: "ru".to_string(),
         };
 
         match np.validate() {
