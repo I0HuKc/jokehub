@@ -2,12 +2,15 @@ use argon2::Config;
 use chrono::{NaiveDateTime, Utc};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use strum_macros::EnumIter;
 use uuid::Uuid;
 use validator::Validate;
 
 use super::validate_query;
 use crate::errors::HubError;
 
+/// Тело запроса при регистрации пользователя
 #[derive(Clone, Validate, Deserialize)]
 pub struct NewUser {
     #[validate(
@@ -23,7 +26,8 @@ pub struct NewUser {
     pub password: String,
 }
 
-#[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
+/// Уровни доступа доступные в системе
+#[derive(Clone, Serialize, PartialEq, EnumIter, Deserialize, Debug)]
 pub enum Level {
     #[serde(rename = "padawan")]
     Padawan,
@@ -35,6 +39,13 @@ pub enum Level {
     Sith,
 }
 
+impl fmt::Display for Level {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+/// Виды тарифов доступных в системе
 #[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
 pub enum Tariff {
     #[serde(rename = "free")]
@@ -56,6 +67,7 @@ impl Default for Tariff {
     }
 }
 
+/// Нативная структура пользовательских данных
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
     #[serde(rename = "_id")]
@@ -108,6 +120,8 @@ impl<'a> User {
     }
 }
 
+/// Тело ответа при запросе личной информации
+/// В отличии от оригинальной структуры не содержит хеша пароля и уровня доступа
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UserResp {
     pub username: String,
@@ -146,6 +160,7 @@ pub mod security {
 
     const SECRET: &str = "secret297152aebda7";
 
+    /// Полезная нагрузка токена доступа
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct AccessClaims {
         access_uuid: Uuid,
@@ -180,11 +195,12 @@ pub mod security {
             return self.username.clone();
         }
 
-        pub fn get_role(&self) -> Level {
+        pub fn get_level(&self) -> Level {
             return self.level.clone();
         }
     }
 
+    /// Полезная нагрузка токена обновления
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct RefreshClaims {
         refresh_uuid: Uuid,
@@ -241,6 +257,8 @@ pub mod security {
         }
     }
 
+    /// Базовый охранник авторизации
+    /// Требует наличие токена доступа в заголовке
     #[derive(Debug)]
     pub struct AuthGuard(pub AccessClaims);
 
@@ -281,6 +299,9 @@ pub mod security {
         }
     }
 
+    /// Индивидуальный охранник, необходим когда авторизация не обязательна.
+    /// Если в заголовке нет токена доступа, тогда по умолчанию применяется тариф Free
+    /// Если токен присутствует, используется тариф содержащийся в токене
     pub struct TariffGuard(pub Tariff, pub Option<HubError>);
 
     #[rocket::async_trait]
@@ -353,6 +374,9 @@ pub mod security {
         }
     }
 
+    /// Набор токенов для аутентификации
+    /// Время жизн и токена доступа — 15 мин
+    /// Время жизни токена обновления — 7д
     #[derive(Clone, Serialize, Deserialize)]
     pub struct Tokens {
         pub access_token: String,
@@ -372,6 +396,7 @@ pub mod security {
             Ok(tokens)
         }
 
+        /// Создание токена доступа
         fn encode_access_token(ac: &AccessClaims) -> Result<String, HubError> {
             jsonwebtoken::encode(
                 &jsonwebtoken::Header::default(),
@@ -384,6 +409,7 @@ pub mod security {
             })
         }
 
+        /// Создание токена обновления
         fn encode_refresh_token(rc: &RefreshClaims) -> Result<String, HubError> {
             jsonwebtoken::encode(
                 &jsonwebtoken::Header::default(),
@@ -396,6 +422,7 @@ pub mod security {
             })
         }
 
+        /// Декодирование любого JWT токена, в зависимости от полезной нагрузки
         pub fn decode_token<T>(token: &'a str) -> Result<TokenData<T>, HubError>
         where
             T: DeserializeOwned,
@@ -425,6 +452,7 @@ pub mod security {
         }
     }
 
+    /// Тело запроса при при обновлении токена доступа
     #[derive(Debug, Clone, Deserialize)]
     pub struct RefreshResp<'a> {
         pub refresh_token: &'a str,
@@ -458,6 +486,53 @@ pub mod security {
                 }
 
                 Err(err) => assert!(false, "{:?}", err),
+            }
+        }
+    }
+}
+
+pub mod validation {
+    use strum::IntoEnumIterator;
+
+    pub fn level_validation(level: &str) -> Result<&str, super::HubError> {
+        let result = super::Level::iter().find(|lev| {
+            lev.to_string().to_lowercase() == level.to_string()
+                && level.to_string() != super::Level::Sith.to_string().to_lowercase()
+        });
+
+        match result {
+            Some(_) => Ok(level),
+            None => Err(super::HubError::new_unprocessable(
+                "Invalid format of level",
+                None,
+            )),
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use test_case::test_case;
+
+        #[test_case("padawan", true ; "valid_level_padawan" )]
+        #[test_case("master", true ; "valid_level_master" )]
+        #[test_case("sith", false ; "invalid_level_sith" )]
+        #[test_case("invalid", false ; "invalid_level" )]
+        fn level_validation(level: &str, is_valid: bool) {
+            match super::level_validation(level) {
+                Ok(_) => {
+                    if is_valid {
+                        assert!(true)
+                    } else {
+                        assert!(false)
+                    }
+                }
+                Err(_) => {
+                    if !is_valid {
+                        assert!(true)
+                    } else {
+                        assert!(false)
+                    }
+                }
             }
         }
     }
