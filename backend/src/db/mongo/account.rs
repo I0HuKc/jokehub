@@ -1,4 +1,4 @@
-use mongodb::results::DeleteResult;
+use mongodb::results::{DeleteResult, UpdateResult};
 use mongodb::{bson::doc, sync::Collection};
 
 use crate::model::account::User;
@@ -22,6 +22,19 @@ impl<'a> User {
         username: String,
     ) -> Result<DeleteResult, HubError> {
         let res = collection.delete_one(doc! { "username":  username}, None)?;
+
+        Ok(res)
+    }
+
+    pub fn privilege_set(
+        collection: Collection<User>,
+        username: &str,
+        level: &str,
+    ) -> Result<UpdateResult, HubError> {
+        let filter = doc! {"username": username};
+        let update = doc! {"$set": {"level": level}};
+
+        let res = collection.update_one(filter, update, None)?;
 
         Ok(res)
     }

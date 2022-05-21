@@ -6,7 +6,7 @@ services:
       - 27017:27017
     volumes:
       - mongodb_data_test:/data/db
-      - ../tools/mongodb_init.sh:/docker-entrypoint-initdb.d/mongodb_init.sh
+      - ../tools/mongodb_test_init.sh:/docker-entrypoint-initdb.d/mongodb_test_init.sh
     healthcheck:
       test:
         [
