@@ -1,17 +1,64 @@
-// use rocket::serde::json::Json;
-// use validator::Validate;
+use mongodb::bson::doc;
+use rocket::serde::json::Json;
+use serde_json::{json, Value};
 
-// use crate::model::joke::{Joke, NewJoke};
-// use crate::{
-//     // db:: PgConn,
-//     errors::Errors,
-// };
+use crate::{
+    db::mongo::{varys::Varys, Crud, MongoConn},
+    err_not_found,
+    errors::HubError,
+    model::{
+        account::security::{AuthGuard, MasterGuard, TariffGuard},
+        joke::*,
+        shrimp::{Flags, Shrimp, Tail},
+        validation::uuid_validation,
+    },
+};
 
+#[post("/joke/new", data = "<jnj>")]
+pub async fn create_joke<'f>(
+    _auth: AuthGuard,
+    client: MongoConn<'f>,
+    jnj: Json<NewJoke>,
+) -> Result<Value, HubError> {
+    let tail = Tail::new(
+        Flags::default(),
+        &jnj.0.language,
+        _auth.0.get_username(),
+        &jnj.0.tags,
+    );
+    let body = Joke::from(jnj.0);
 
+    let result = Shrimp::create(Varys::get(client, Varys::Joke), Shrimp::new(body, tail))?;
+    let resp = json!({"id": result.inserted_id});
 
-// #[post("/joke/new", data = "<jnj>")]
-// pub async fn create_joke<'f>(c: PgConn, jnj: Json<NewJoke>) -> Result<Json<Joke>, Errors<'f>> {
-//     jnj.0.validate()?;
-//     let joke = Joke::create(c, jnj.0).await?;
-//     Ok(Json(joke))
-// }
+    Ok(resp)
+}
+
+#[get("/joke/<id>")]
+pub async fn get_joke<'f>(
+    _tariff: TariffGuard,
+    client: MongoConn<'f>,
+    id: &str,
+) -> Result<Value, HubError> {
+    let result: Shrimp<Joke> =
+        Shrimp::get_by_id(Varys::get(client, Varys::Joke), uuid_validation(id)?)?;
+
+    Ok(result.tariffing(_tariff.0, _tariff.1))
+}
+
+#[delete("/joke/<id>")]
+pub async fn delete_joke<'f>(
+    _level: MasterGuard,
+    client: MongoConn<'f>,
+    id: &str,
+) -> Result<(), HubError> {
+    Shrimp::<Joke>::del_by_id(Varys::get(client, Varys::Joke), uuid_validation(id)?).and_then(
+        |d_result| {
+            if d_result.deleted_count < 1 {
+                Err(err_not_found!("joke"))
+            } else {
+                Ok(())
+            }
+        },
+    )
+}

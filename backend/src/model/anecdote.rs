@@ -15,7 +15,7 @@ pub struct Anecdote {
 
 #[derive(Clone, Deserialize, Validate, Debug)]
 pub struct NewAnecdote {
-    #[validate(length(min = 10, max = 280, message = "Lenght is invalid"))]
+    #[validate(length(min = 10, max = 1000, message = "Lenght is invalid"))]
     pub text: String,
 
     #[serde(default = "default_tags")]

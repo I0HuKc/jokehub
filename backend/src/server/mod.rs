@@ -1,8 +1,8 @@
-mod account_handlers;
+mod account_handler;
 mod anecdote_handler;
 mod config;
 mod joke_handler;
-mod ping_handler;
+mod base_handler;
 mod punch_handler;
 
 use crate::{
@@ -10,11 +10,7 @@ use crate::{
 };
 
 use {
-    // use joke_handler::*;
-    account_handlers::*,
-    anecdote_handler::*,
-    ping_handler::*,
-    punch_handler::*,
+    account_handler::*, anecdote_handler::*, joke_handler::*, base_handler::*, punch_handler::*,
 };
 
 #[launch]
@@ -34,6 +30,10 @@ pub fn rocket() -> _ {
                 create_punch,
                 get_punch,
                 delete_punch,
+                // Jokes methods
+                create_joke,
+                get_joke,
+                delete_joke,
                 // Accounts methods
                 registration,
                 login,

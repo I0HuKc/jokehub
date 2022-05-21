@@ -57,6 +57,21 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
         }
     );
 
+    db.createCollection("joke");
+    db.joke.createIndex(
+        {
+            "text": 1
+        }, 
+        {
+            "unique": true, 
+            "partialFilterExpression": {
+                "text": {
+                    \$type: "string"
+                }
+            }
+        }
+    );
+
     db.createCollection("punch");
     db.punch.createIndex(
         {

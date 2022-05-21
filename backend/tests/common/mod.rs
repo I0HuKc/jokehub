@@ -1,6 +1,7 @@
 pub mod accounts;
 pub mod anecdote;
 pub mod punch;
+pub mod joke;
 
 use once_cell::sync::OnceCell;
 use rocket::local::blocking::{Client, LocalResponse};

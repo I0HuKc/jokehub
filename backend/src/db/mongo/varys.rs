@@ -7,7 +7,7 @@ pub enum Varys {
     Users,
 
     Anecdote,
-    // Joke,
+    Joke,
     Punch,
     // Story,
 }
@@ -24,6 +24,11 @@ impl Varys {
                 .0
                 .database(dotenv!("MONGO_DATABASE_NAME"))
                 .collection("punch"),
+
+            Varys::Joke => client
+                .0
+                .database(dotenv!("MONGO_DATABASE_NAME"))
+                .collection("joke"),
 
             Varys::Users => client
                 .0

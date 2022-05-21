@@ -1,41 +1,38 @@
-// use chrono::NaiveDateTime;
-// use diesel::{Insertable, Queryable};
-// use rocket::serde::{Deserialize, Serialize};
-// use uuid::Uuid;
-// use validator::{Validate, ValidationError};
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
-// use crate::model::SUPPORTED_LANGUAGES;
+use crate::model::{
+    shrimp::{default_tags, Paws},
+    validation::validate_lang,
+};
+use shrimplib::Paws;
 
-// #[derive(Clone, Serialize, Queryable, Debug)]
-// #[serde(crate = "rocket::serde")]
-// pub struct Joke {
-//     pub uuid: Uuid,
-//     pub category: String,
-//     pub language: String,
-//     pub setup: String,
-//     pub punchline: Option<String>,
-//     pub created_at: NaiveDateTime,
-// }
+#[derive(Clone, Serialize, Deserialize, Paws)]
+pub struct Joke {
+    pub category: String,
+    pub text: String,
+}
 
-// #[derive(Deserialize, Validate, Insertable, Debug)]
-// #[serde(crate = "rocket::serde")]
-// pub struct NewJoke {
-//     pub category: String,
-//     #[validate(
-//         length(equal = 2, message = "Invalid length"),
-//         custom(function = "validate_language", message = "Unknown type")
-//     )]
-//     pub language: String,
-//     pub setup: String,
-//     pub punchline: Option<String>,
-// }
+#[derive(Clone, Deserialize, Validate, Debug)]
+pub struct NewJoke {
+    #[validate(length(min = 10, max = 280, message = "Lenght is invalid"))]
+    pub text: String,
 
-// fn validate_language(lang: &str) -> Result<(), ValidationError> {
-//     for l in SUPPORTED_LANGUAGES.clone() {
-//         if lang == l {
-//             return Ok(());
-//         }
-//     }
+    #[serde(default = "default_tags")]
+    pub tags: Vec<String>,
 
-//     return Err(ValidationError::new("custom"));
-// }
+    #[validate(
+        length(equal = 2, message = "Invalid length"),
+        custom(function = "validate_lang", message = "Unknown type")
+    )]
+    pub language: String,
+}
+
+impl From<NewJoke> for Joke {
+    fn from(nj: NewJoke) -> Self {
+        Joke {
+            category: String::from("joke"),
+            text: nj.text,
+        }
+    }
+}

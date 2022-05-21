@@ -34,7 +34,6 @@ pub async fn create_anecdote<'f>(
     Ok(resp)
 }
 
-
 #[get("/anecdote/<id>")]
 pub async fn get_anecdote<'f>(
     _tariff: TariffGuard,
@@ -47,9 +46,6 @@ pub async fn get_anecdote<'f>(
     Ok(result.tariffing(_tariff.0, _tariff.1))
 }
 
-/// Удалить запись можно только с уровнем не ниже Master
-/// Auth: true
-/// Level: Master
 #[delete("/anecdote/<id>")]
 pub async fn delete_anecdote<'f>(
     _level: MasterGuard,
