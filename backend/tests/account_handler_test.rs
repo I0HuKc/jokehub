@@ -3,7 +3,6 @@ mod common;
 use rocket::http::{ContentType, Header, Status};
 use rocket::local::blocking::Client;
 use serde::Deserialize;
-use serde_json::Value;
 
 use common::accounts::TestPadawan;
 use jokehub::model::account::{
@@ -179,6 +178,102 @@ fn delete_account() {
         }
 
         Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    }
+}
+
+mod level_guard {
+    use crate::{
+        common,
+        common::accounts as account,
+        common::accounts::{TestMaster, TestPadawan, TestSith},
+    };
+    use jokehub::model::account::security::{AccessClaims, Tokens};
+    use rocket::http::{Header, Status};
+
+    #[test]
+    fn level_upgrade_by_padawan() {
+        let path: &str = "/v1/privilege/tsith/padawan";
+        let client = common::test_client().lock().unwrap();
+        let padawan = TestPadawan::default();
+
+        match account::try_login(&client, Box::new(padawan)) {
+            Ok(tokens) => {
+                let resp = client
+                    .put(format!("{}", path))
+                    .header(crate::bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Forbidden);
+            }
+
+            Err(err) => {
+                assert!(false, "\n\nFaild to login: {}\n\n", err)
+            }
+        }
+    }
+
+    #[test]
+    fn level_upgrade_by_master() {
+        let path: &str = "/v1/privilege/tsith/padawan";
+        let client = common::test_client().lock().unwrap();
+        let master = TestMaster::default();
+
+        match account::try_login(&client, Box::new(master)) {
+            Ok(tokens) => {
+                let resp = client
+                    .put(format!("{}", path))
+                    .header(crate::bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Forbidden);
+            }
+
+            Err(err) => {
+                assert!(false, "\n\nFaild to login: {}\n\n", err)
+            }
+        }
+    }
+
+    #[test]
+    fn level_upgrade_by_sith() {
+        let path: &str = "/v1/privilege/tpadawan/master";
+        let client = common::test_client().lock().unwrap();
+        let sith = TestSith::default();
+
+        match account::try_login(&client, Box::new(sith)) {
+            Ok(tokens) => {
+                let resp = client
+                    .put(format!("{}", path))
+                    .header(crate::bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Ok);
+
+                // Проверка действительности обновления уровня
+                {
+                    let updated_user = TestPadawan::new("tpadawan", "12344321e");
+                    match account::try_login(&client, Box::new(updated_user)) {
+                        Ok(tokens) => {
+                            let access_payload =
+                                Tokens::decode_token::<AccessClaims>(tokens.access_token.as_str())
+                                    .expect("valid access token");
+
+                            assert_eq!(
+                                access_payload.claims.get_level().to_string().to_lowercase(),
+                                "master".to_string()
+                            );
+                        }
+                        Err(err) => {
+                            assert!(false, "\n\nFaild to login by updated user: {}\n\n", err)
+                        }
+                    }
+                }
+            }
+
+            Err(err) => {
+                assert!(false, "\n\nFaild to login: {}\n\n", err)
+            }
+        }
     }
 }
 

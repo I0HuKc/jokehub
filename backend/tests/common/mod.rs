@@ -1,12 +1,20 @@
 pub mod accounts;
+pub mod anecdote;
 pub mod punch;
 
 use once_cell::sync::OnceCell;
 use rocket::local::blocking::{Client, LocalResponse};
+use serde::Deserialize;
 use serde_json::Value;
 use std::sync::Mutex;
 
 use jokehub::server;
+
+#[derive(Deserialize, Debug)]
+pub struct RegResp {
+    #[allow(dead_code)]
+    id: String,
+}
 
 #[macro_export]
 macro_rules! bearer {
@@ -24,17 +32,16 @@ macro_rules! json_string {
 
 #[macro_export]
 macro_rules! assert_body {
-    ( $resp:expr, $t:tt ) => {
-        {
-            let body = $resp.into_string().unwrap();
-            let value: Value = serde_json::from_str(&body).expect("can't parse value");
+    ( $resp:expr, $t:tt ) => {{
+        use serde_json::Value;
 
-            serde_json::from_str::<$t>(value.to_string().as_str())
-                .expect(format!("{} valid response", stringify!($t)).as_str())
-        }
-    };
+        let body = $resp.into_string().unwrap();
+        let value: Value = serde_json::from_str(&body).expect("can't parse value");
+
+        serde_json::from_str::<$t>(value.to_string().as_str())
+            .expect(format!("{} valid response", stringify!($t)).as_str())
+    }};
 }
-
 
 #[allow(dead_code)]
 pub fn test_client() -> &'static Mutex<Client> {

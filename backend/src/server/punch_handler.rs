@@ -7,7 +7,7 @@ use validator::Validate;
 // use crate::errors;
 
 use crate::model::{
-    account::security::{AuthGuard, TariffGuard},
+    account::security::{AuthGuard, TariffGuard, MasterGuard},
     punch::*,
     shrimp::{Flags, Shrimp, Tail},
     uuid_validation,
@@ -53,7 +53,7 @@ pub async fn get_punch<'f>(_tariff: TariffGuard, client: MongoConn<'f>, id: &str
 
 #[delete("/punch/<id>")]
 pub async fn delete_punch<'f>(
-    _auth: AuthGuard,
+    _auth: MasterGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<(), HubError> {

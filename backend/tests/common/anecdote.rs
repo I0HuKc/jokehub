@@ -9,42 +9,40 @@ use std::sync::MutexGuard;
 use super::{accounts as account, accounts::TestUser, RegResp};
 use jokehub::model::account::security::Tokens;
 
-pub struct TestNewPunch {
-    pub setup: String,
-    pub punchline: String,
+pub struct TestNewAnecdote {
+    pub text: String,
 }
 
-impl TestNewPunch {
-    /// Тестовый метод быстрого создания записи в таблице панчей
+impl TestNewAnecdote {
     #[allow(dead_code)]
     pub fn create_test_record(
         client: &MutexGuard<Client>,
         user: Box<dyn TestUser>,
     ) -> Result<(Tokens, Status, String), Value> {
-        let path: &str = "/v1/punch/new";
-        let punch = TestNewPunch::default();
+        let path: &str = "/v1/anecdote/new";
+        let anecdote = TestNewAnecdote::default();
 
         match account::try_login(&client, user) {
             Ok(tokens) => {
                 let resp = client
-                    .post(path)
+                    .post(format!("{}", path))
                     .header(crate::bearer!((tokens.access_token)))
                     .header(ContentType::JSON)
                     .body(crate::json_string!({
-                        "setup": punch.setup,
-                        "punchline": punch.punchline,
+                        "text": anecdote.text,
                         "language": "ru"
                     }))
                     .dispatch();
 
                 Ok((tokens, resp.status(), crate::assert_body!(resp, RegResp).id))
             }
+
             Err(err) => Err(err),
         }
     }
 }
 
-impl Default for TestNewPunch {
+impl Default for TestNewAnecdote {
     fn default() -> Self {
         let salt: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
@@ -53,8 +51,7 @@ impl Default for TestNewPunch {
             .collect();
 
         Self {
-            setup: format!("Как каннибал называет Пашу? {}", salt),
-            punchline: "Паштет".to_string(),
+            text: format!("Как каннибал называет Пашу? {}", salt),
         }
     }
 }

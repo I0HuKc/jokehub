@@ -1,30 +1,26 @@
 mod common;
 
+use common::{accounts::{TestPadawan, TestSith}, anecdote::TestNewAnecdote};
 use rocket::http::{Header, Status};
 
-use common::{
-    accounts::{TestMaster, TestPadawan},
-    punch::TestNewPunch,
-};
-
 #[test]
-fn create_punch() {
+fn create_anecdote() {
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::default();
 
-    match TestNewPunch::create_test_record(&client, Box::new(padawan)) {
+    match TestNewAnecdote::create_test_record(&client, Box::new(padawan)) {
         Ok((_, status, ..)) => assert_eq!(status, Status::Ok),
         Err(err) => assert!(false, "\n\nFaild to create test record: {}\n\n", err),
     }
 }
 
 #[test]
-fn get_punch() {
-    let path: &str = "/v1/punch/";
+fn get_anecdote() {
+    let path: &str = "/v1/anecdote/";
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::default();
 
-    match TestNewPunch::create_test_record(&client, Box::new(padawan)) {
+    match TestNewAnecdote::create_test_record(&client, Box::new(padawan)) {
         Ok((_, status, id)) => {
             assert_eq!(status, Status::Ok);
 
@@ -48,18 +44,17 @@ fn get_punch() {
                 assert_eq!(resp.status(), Status::NotFound);
             }
         }
-
         Err(err) => assert!(false, "\n\nFaild to create test record: {}\n\n", err),
     }
 }
 
 #[test]
-fn delete_punch_by_padawan() {
-    let path: &str = "/v1/punch/";
+fn delete_anecdote_by_padawan() {
+    let path: &str = "/v1/anecdote/";
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::default();
 
-    match TestNewPunch::create_test_record(&client, Box::new(padawan)) {
+    match TestNewAnecdote::create_test_record(&client, Box::new(padawan)) {
         Ok((tokens, status, id)) => {
             assert_eq!(status, Status::Ok);
 
@@ -75,12 +70,12 @@ fn delete_punch_by_padawan() {
 }
 
 #[test]
-fn delete_punch_by_master() {
-    let path: &str = "/v1/punch/";
+fn delete_anecdote_by_sith() {
+    let path: &str = "/v1/anecdote/";
     let client = common::test_client().lock().unwrap();
-    let master = TestMaster::default();
+    let sith = TestSith::default();
 
-    match TestNewPunch::create_test_record(&client, Box::new(master)) {
+    match TestNewAnecdote::create_test_record(&client, Box::new(sith)) {
         Ok((tokens, status, id)) => {
             assert_eq!(status, Status::Ok);
 
@@ -94,3 +89,4 @@ fn delete_punch_by_master() {
         Err(err) => assert!(false, "\n\nFaild to create test record: {}\n\n", err),
     }
 }
+

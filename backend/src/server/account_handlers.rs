@@ -11,9 +11,12 @@ use crate::{
     db::redis::RedisConn,
     err_internal, err_not_found, err_unauthorized,
     errors::HubError,
-    model::account::{
-        security::{AuthGuard, RefreshClaims, RefreshResp, Tokens},
-        *,
+    model::{
+        account::{
+            security::{AuthGuard, RefreshClaims, RefreshResp, SithGuard, Tokens},
+            validation::level_validation,
+            *,
+        },        
     },
 };
 
@@ -141,4 +144,25 @@ pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(),
             }
         },
     )
+}
+
+#[put("/privilege/<username>/<level>")]
+pub async fn privilege<'f>(
+    _level: SithGuard,
+    client: MongoConn<'f>,
+    username: &str,
+    level: &str,
+) -> Result<(), HubError> {
+    User::privilege_set(
+        Varys::get(client, Varys::Users),
+        username,
+        level_validation(level)?,
+    )
+    .and_then(|up_result| {
+        if up_result.matched_count < 1 {
+            Err(err_not_found!("user"))
+        } else {
+            Ok(())
+        }
+    })
 }

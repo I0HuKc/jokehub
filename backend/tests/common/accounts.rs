@@ -11,7 +11,7 @@ pub trait TestUser {
     fn get_password(&self) -> &str;
 }
 
-// Тестовый пользователь с уровнем доступа Padawan
+/// Тестовый пользователь с уровнем доступа Padawan
 #[allow(dead_code)]
 pub struct TestPadawan<'a> {
     username: &'a str,
@@ -21,7 +21,7 @@ pub struct TestPadawan<'a> {
 impl<'a> TestPadawan<'a> {
     #[allow(dead_code)]
     pub fn new(username: &'a str, password: &'a str) -> Self {
-        TestPadawan { username, password }
+        Self { username, password }
     }
 }
 
@@ -44,7 +44,61 @@ impl<'a> TestUser for TestPadawan<'a> {
     }
 }
 
-// Создать тестовый аккаунт
+/// Тестовый пользователь с уровнем доступа Master
+/// Пользователь создается автоматически при создании тестового окружения
+#[allow(dead_code)]
+pub struct TestMaster<'a> {
+    username: &'a str,
+    password: &'a str,
+}
+
+impl<'a> Default for TestMaster<'a> {
+    fn default() -> Self {
+        Self {
+            username: "tmaster",
+            password: "12344321e",
+        }
+    }
+}
+
+impl<'a> TestUser for TestMaster<'a> {
+    fn get_username(&self) -> &str {
+        return self.username;
+    }
+
+    fn get_password(&self) -> &str {
+        return self.password;
+    }
+}
+
+/// Тестовый пользователь с уровнем доступа Sith
+/// Пользователь создается автоматически при создании тестового окружения
+#[allow(dead_code)]
+pub struct TestSith<'a> {
+    username: &'a str,
+    password: &'a str,
+}
+
+impl<'a> Default for TestSith<'a> {
+    fn default() -> Self {
+        Self {
+            username: "tsith",
+            password: "12344321e",
+        }
+    }
+}
+
+impl<'a> TestUser for TestSith<'a> {
+    fn get_username(&self) -> &str {
+        return self.username;
+    }
+
+    fn get_password(&self) -> &str {
+        return self.password;
+    }
+}
+
+/// Создать тестовый аккаунт
 #[allow(dead_code)]
 fn registration(client: &Client, username: &str, password: &str) -> Result<(), Value> {
     let resp = client
@@ -63,7 +117,7 @@ fn registration(client: &Client, username: &str, password: &str) -> Result<(), V
     }
 }
 
-// Авторизоваться
+/// Авторизоваться
 #[allow(dead_code)]
 fn login(client: &Client, username: &str, password: &str) -> Result<Tokens, (Status, Value)> {
     let resp = client
