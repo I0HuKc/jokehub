@@ -4,7 +4,8 @@ use serde::Serialize;
 
 use crate::{
     db::mongo::Crud,
-    errors::{message::ERR_NOT_FOUND, HubError},
+    err_internal, err_not_found,
+    errors::HubError,
     model::shrimp::{Paws, Shrimp},
 };
 
@@ -24,9 +25,19 @@ where
     }
 
     fn get_by_id(collection: Collection<Shrimp<T>>, id: &str) -> Result<Shrimp<T>, HubError> {
-        match collection.find_one(doc! { "_id":  id}, None)? {
-            Some(value) => Ok(value),
-            None => Err(HubError::new_not_found(ERR_NOT_FOUND.as_ref(), None)),
+        let filter = doc! {"_id": id};
+        let update = doc! {"$inc": {"_header.counter": 1}};
+
+        match collection.find_one_and_update(filter, update, None) {
+            Ok(result) => {
+                if let Some(shrimp) = result {
+                    Ok(shrimp)
+                } else {
+                    Err(err_not_found!(collection.name()))
+                }
+            }
+
+            Err(err) => Err(err_internal!(err.to_string())),
         }
     }
 }

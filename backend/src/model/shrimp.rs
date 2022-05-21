@@ -28,6 +28,7 @@ impl Head {
 /// Флаги деликатности контента
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Flags {
+    pub nsfw: bool,
     pub religious: bool,
     pub political: bool,
     pub racist: bool,
@@ -35,8 +36,9 @@ pub struct Flags {
 }
 
 impl Flags {
-    pub fn new(religious: bool, political: bool, racist: bool, sexist: bool) -> Self {
+    pub fn new(nsfw: bool, religious: bool, political: bool, racist: bool, sexist: bool) -> Self {
         Flags {
+            nsfw,
             religious,
             political,
             racist,
@@ -46,6 +48,7 @@ impl Flags {
 
     pub fn default() -> Self {
         Flags {
+            nsfw: false,
             religious: false,
             political: false,
             racist: false,
@@ -54,6 +57,11 @@ impl Flags {
     }
 
     // Переключатели деликатности контента
+
+    pub fn nsfw_coup(&mut self) -> Self {
+        self.nsfw = !self.nsfw;
+        return self.clone();
+    }
 
     pub fn religious_coup(&mut self) -> Self {
         self.religious = !self.religious;
@@ -126,7 +134,9 @@ where
     pub tail: Tail,
 }
 
-pub trait Paws {}
+pub trait Paws {
+    fn get_category(&self) -> String;
+}
 
 impl<B> Shrimp<B>
 where
