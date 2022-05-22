@@ -16,7 +16,7 @@ fn impl_paws_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
         impl Paws for #name {
-            fn get_category(&self) -> String {
+            fn get_category(&self) -> Category {
                 return self.category.clone();
             }
         }
