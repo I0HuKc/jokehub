@@ -3,6 +3,7 @@ mod anecdote_handler;
 mod base_handler;
 mod joke_handler;
 mod punch_handler;
+mod random_handler;
 
 mod config;
 mod lingua;
@@ -11,7 +12,10 @@ use crate::db::DbManage;
 
 use self::lingua::LinguaManage;
 
-use {account_handler::*, anecdote_handler::*, base_handler::*, joke_handler::*, punch_handler::*};
+use {
+    account_handler::*, anecdote_handler::*, base_handler::*, joke_handler::*, punch_handler::*,
+    random_handler::*,
+};
 
 #[launch]
 pub fn rocket() -> _ {
@@ -35,6 +39,8 @@ pub fn rocket() -> _ {
                 create_joke,
                 get_joke,
                 delete_joke,
+                // Random
+                random,
                 // Accounts methods
                 registration,
                 login,

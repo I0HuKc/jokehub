@@ -1,13 +1,20 @@
 use chrono::{NaiveDateTime, Utc};
-
 use lingua::IsoCode639_1;
+use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::fmt;
+use strum_macros::EnumIter;
 use uuid::Uuid;
 
+use super::account::Tariff;
 use crate::errors::HubError;
 
-use super::account::Tariff;
+impl fmt::Display for Category {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 /// Заголовок любой записи контента
 #[derive(Clone, Serialize, Deserialize)]
@@ -135,7 +142,7 @@ where
 }
 
 pub trait Paws {
-    fn get_category(&self) -> String;
+    fn get_category(&self) -> Category;
 }
 
 impl<B> Shrimp<B>
@@ -199,6 +206,41 @@ where
             base.clone()
         } else {
             base.clone()
+        }
+    }
+}
+
+pub struct Query<'a> {
+    pub author: Option<&'a str>,
+    pub uniq: Option<bool>,
+    pub lang: Option<&'a str>,
+}
+
+#[derive(Clone, Serialize, PartialEq, EnumIter, Deserialize, FromFormField, Debug)]
+pub enum Category {
+    #[serde(rename = "anecdote")]
+    Anecdote,
+
+    #[serde(rename = "joke")]
+    Joke,
+
+    #[serde(rename = "punch")]
+    Punch,
+}
+
+impl Category {
+    /// Выбор случайной категории.
+    /// Если есть предпочитаемые категории, выбирается случайная из предоставленных.
+    /// Если список предпочтений пуст, выбирается из общего списка категоий.
+    pub fn random(list: &Option<Vec<Category>>) -> Category {
+        use super::shrimp::Category::{Anecdote, Joke, Punch};
+
+        match list {
+            Some(v) => v.choose(&mut rand::thread_rng()).unwrap().clone(),
+            None => {
+                let v = vec![Anecdote, Joke, Punch];
+                v.choose(&mut rand::thread_rng()).unwrap().clone()
+            }
         }
     }
 }

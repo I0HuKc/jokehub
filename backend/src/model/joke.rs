@@ -1,14 +1,12 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::model::{
-    shrimp::{default_tags, Paws},
-};
+use crate::model::shrimp::{default_tags, Category, Paws};
 use shrimplib::Paws;
 
 #[derive(Clone, Serialize, Deserialize, Paws)]
 pub struct Joke {
-    pub category: String,
+    pub category: Category,
     pub text: String,
 }
 
@@ -24,7 +22,7 @@ pub struct NewJoke {
 impl From<NewJoke> for Joke {
     fn from(nj: NewJoke) -> Self {
         Joke {
-            category: String::from("joke"),
+            category: Category::Joke,
             text: nj.text,
         }
     }

@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use shrimplib::Paws;
 
-use crate::model::shrimp::{default_tags, Paws};
+use crate::model::shrimp::{default_tags, Paws, Category};
 use validator::Validate;
 
 #[derive(Clone, Serialize, Deserialize, Paws)]
 pub struct Punch {
-    pub category: String,
+    pub category: Category,
     pub setup: String,
     pub punchline: String,
 }
@@ -29,7 +29,7 @@ impl From<NewPunch> for Punch {
         Punch {
             setup: np.setup.to_string(),
             punchline: np.punchline.to_string(),
-            category: String::from("punch"),
+            category: Category::Punch,
         }
     }
 }

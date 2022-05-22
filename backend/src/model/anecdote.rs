@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::model::shrimp::{default_tags, Paws};
+use crate::model::shrimp::{default_tags, Paws, Category};
 use shrimplib::Paws;
 
 #[derive(Clone, Serialize, Deserialize, Paws)]
 pub struct Anecdote {
-    pub category: String,
+    pub category: Category,
     pub text: String,
 }
 
@@ -23,7 +23,7 @@ impl From<NewAnecdote> for Anecdote {
     fn from(na: NewAnecdote) -> Self {
         Anecdote {
             text: na.text.to_string(),
-            category: String::from("anecdote"),
+            category: Category::Anecdote,
         }
     }
 }

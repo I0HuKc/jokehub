@@ -20,7 +20,7 @@ use rocket::{
     Request, State,
 };
 
-use crate::errors::message::ERR_NOT_FOUND;
+use crate::err_not_found;
 
 pub struct MongoConn<'a>(pub &'a State<Box<Client>>);
 
@@ -79,7 +79,7 @@ where
     fn get_by_id(collection: Collection<T>, id: &str) -> Result<T, HubError> {
         match collection.find_one(doc! { "_id":  id}, None)? {
             Some(value) => Ok(value),
-            None => Err(HubError::new_not_found(ERR_NOT_FOUND.as_ref(), None)),
+            None => Err(err_not_found!(collection.name())),
         }
     }
 
