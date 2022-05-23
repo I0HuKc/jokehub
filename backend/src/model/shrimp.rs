@@ -1,6 +1,7 @@
 use chrono::{NaiveDateTime, Utc};
 use lingua::IsoCode639_1;
 use rand::prelude::SliceRandom;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fmt;
@@ -20,6 +21,7 @@ impl fmt::Display for Category {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Head {
     pub counter: usize,
+    pub rfd: u32,
     pub timestamp: NaiveDateTime,
 }
 
@@ -27,6 +29,7 @@ impl Head {
     pub fn new() -> Self {
         Head {
             counter: 0,
+            rfd: rand::thread_rng().gen::<u32>(),
             timestamp: Utc::now().naive_utc(),
         }
     }
@@ -208,12 +211,6 @@ where
             base.clone()
         }
     }
-}
-
-pub struct Query<'a> {
-    pub author: Option<&'a str>,
-    pub uniq: Option<bool>,
-    pub lang: Option<&'a str>,
 }
 
 #[derive(Clone, Serialize, PartialEq, EnumIter, Deserialize, FromFormField, Debug)]
