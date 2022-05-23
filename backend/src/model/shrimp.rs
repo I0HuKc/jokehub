@@ -5,17 +5,10 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fmt;
-use strum_macros::EnumIter;
 use uuid::Uuid;
 
 use super::account::Tariff;
 use crate::errors::HubError;
-
-impl fmt::Display for Category {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
 
 /// Заголовок любой записи контента
 #[derive(Clone, Serialize, Deserialize)]
@@ -34,6 +27,22 @@ impl Head {
         }
     }
 }
+
+#[derive(Clone, PartialEq, FromFormField, Debug)]
+pub enum Flag {
+    Nsfw,
+    Religious,
+    Political,
+    Racist,
+    Sexist,
+}
+
+impl fmt::Display for Flag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 
 /// Флаги деликатности контента
 #[derive(Clone, Serialize, Deserialize)]
@@ -213,7 +222,7 @@ where
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, EnumIter, Deserialize, FromFormField, Debug)]
+#[derive(Clone, Serialize, PartialEq, Deserialize, FromFormField, Debug)]
 pub enum Category {
     #[serde(rename = "anecdote")]
     Anecdote,
@@ -239,5 +248,11 @@ impl Category {
                 v.choose(&mut rand::thread_rng()).unwrap().clone()
             }
         }
+    }
+}
+
+impl fmt::Display for Category {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

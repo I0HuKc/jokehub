@@ -9,34 +9,34 @@ use crate::{
         anecdote::Anecdote,
         joke::Joke,
         punch::Punch,
-        shrimp::{Category, Shrimp},
+        shrimp::{Category, Flag, Shrimp},
     },
 };
 
-#[get("/random?<category>&<uniq>&<author>&<lang>")]
+#[get("/random?<category>&<flag>&<author>&<lang>")]
 pub fn random<'f>(
     _tariff: TariffGuard,
     client: MongoConn<'f>,
     category: Option<Vec<Category>>,
-    uniq: Option<bool>,
+    flag: Option<Vec<Flag>>,
     author: Option<&str>,
     lang: Option<&str>,
 ) -> Result<Value, HubError> {
     match Category::random(&category) {
         Category::Anecdote => {
             let result =
-                Shrimp::<Anecdote>::get_random(Varys::get(client, Varys::Anecdote), author, lang)?;
+                Shrimp::<Anecdote>::get_random(Varys::get(client, Varys::Anecdote), author, lang, flag)?;
 
             Ok(result.tariffing(_tariff.0, _tariff.1))
         }
         Category::Joke => {
-            let result = Shrimp::<Joke>::get_random(Varys::get(client, Varys::Joke), author, lang)?;
+            let result = Shrimp::<Joke>::get_random(Varys::get(client, Varys::Joke), author, lang, flag)?;
 
             Ok(result.tariffing(_tariff.0, _tariff.1))
         }
         Category::Punch => {
             let result =
-                Shrimp::<Punch>::get_random(Varys::get(client, Varys::Punch), author, lang)?;
+                Shrimp::<Punch>::get_random(Varys::get(client, Varys::Punch), author, lang, flag)?;
 
             Ok(result.tariffing(_tariff.0, _tariff.1))
         }

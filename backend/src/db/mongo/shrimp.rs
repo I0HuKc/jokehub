@@ -1,3 +1,4 @@
+use bson::Document;
 use mongodb::{bson::doc, sync::Collection};
 use rand::Rng;
 use rocket::serde::DeserializeOwned;
@@ -7,7 +8,7 @@ use crate::{
     db::mongo::Crud,
     err_internal, err_not_found,
     errors::HubError,
-    model::shrimp::{Paws, Shrimp},
+    model::shrimp::{Flag, Paws, Shrimp},
 };
 
 macro_rules! macro_filter {
@@ -57,6 +58,7 @@ where
         collection: Collection<Shrimp<T>>,
         author: Option<&str>,
         lang: Option<&str>,
+        flags: Option<Vec<Flag>>,
     ) -> Result<Shrimp<T>, HubError> {
         let r = rand::thread_rng().gen::<u32>();
         let update = doc! {"$inc": {"_header.counter": 1}};
@@ -67,7 +69,8 @@ where
             ("_meta-data.author", author)
         );
 
-        match collection.find_one_and_update(filter, update.clone(), None) {
+        match collection.find_one_and_update(add_flags(filter, flags.clone()), update.clone(), None)
+        {
             Ok(result) => {
                 if let Some(shrimp) = result {
                     Ok(shrimp)
@@ -79,7 +82,7 @@ where
                         ("_meta-data.author", author)
                     );
 
-                    match collection.find_one_and_update(filter, update, None) {
+                    match collection.find_one_and_update(add_flags(filter, flags), update, None) {
                         Ok(result) => {
                             if let Some(shrimp) = result {
                                 Ok(shrimp)
@@ -97,5 +100,17 @@ where
 
             Err(err) => Err(err_internal!(err.to_string())),
         }
+    }
+}
+
+fn add_flags(mut base: Document, flags: Option<Vec<Flag>>) -> Document {
+    if flags.is_some() {
+        for f in flags.unwrap().iter() {
+            base.insert(format!("_meta-data.flags.{}", f.to_string().to_lowercase()), true);
+        }
+
+        base.clone()
+    } else {
+        base.clone()
     }
 }
