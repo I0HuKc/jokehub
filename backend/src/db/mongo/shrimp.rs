@@ -1,4 +1,5 @@
 use mongodb::{bson::doc, sync::Collection};
+use rand::Rng;
 use rocket::serde::DeserializeOwned;
 use serde::Serialize;
 
@@ -6,8 +7,23 @@ use crate::{
     db::mongo::Crud,
     err_internal, err_not_found,
     errors::HubError,
-    model::shrimp::{Paws, Query, Shrimp},
+    model::shrimp::{Paws, Shrimp},
 };
+
+macro_rules! macro_filter {
+    ($co:literal, $ri:expr, $( ($k:literal, $v:expr)), *) => {
+        {
+            let mut filter = doc! {"_header.rfd": {$co: $ri}};
+            $(
+                if $v.is_some() {
+                    filter.insert($k, $v);
+                }
+            )*
+
+            filter
+        }
+    };
+}
 
 impl<'a, T> Crud<'a, Shrimp<T>> for Shrimp<T>
 where
@@ -37,40 +53,45 @@ where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,
     T: Paws,
 {
-    pub fn get_random(collection: Collection<Shrimp<T>>, q: Query) -> Result<Shrimp<T>, HubError> {
-        let filter = doc! {"_meta-data.author": q.author};
+    pub fn get_random(
+        collection: Collection<Shrimp<T>>,
+        author: Option<&str>,
+        lang: Option<&str>,
+    ) -> Result<Shrimp<T>, HubError> {
+        let r = rand::thread_rng().gen::<u32>();
         let update = doc! {"$inc": {"_header.counter": 1}};
+        let filter = macro_filter!(
+            "$gt",
+            r,
+            ("_meta-data.language", lang),
+            ("_meta-data.author", author)
+        );
 
-        let pipeline = vec![
-            // doc! {
-            //    // filter on movie title:
-            //    "$match": {
-            //       "title": "A Star Is Born"
-            //    }
-            // },
-            doc! {              
-               "$sample": {
-                  "size": 1
-               }
-            },
-        ];
-
-        // match collection.aggregate(pipeline, None) {
-        //     Ok(v) => {
-        //         let c = v.collect::<HubError>()?;
-
-        //         // println!("{:?}", v.collect::<HubError>())
-        //     },
-
-        //     Err(_) => todo!(),
-        // };
-
-        match collection.find_one_and_update(filter, update, None) {
+        match collection.find_one_and_update(filter, update.clone(), None) {
             Ok(result) => {
                 if let Some(shrimp) = result {
                     Ok(shrimp)
                 } else {
-                    Err(err_not_found!(collection.name()))
+                    let filter = macro_filter!(
+                        "$lte",
+                        r,
+                        ("_meta-data.language", lang),
+                        ("_meta-data.author", author)
+                    );
+
+                    match collection.find_one_and_update(filter, update, None) {
+                        Ok(result) => {
+                            if let Some(shrimp) = result {
+                                Ok(shrimp)
+                            } else {
+                                let error = err_not_found!("records");
+
+                                Err(error)
+                            }
+                        }
+
+                        Err(err) => Err(err_internal!(err.to_string())),
+                    }
                 }
             }
 

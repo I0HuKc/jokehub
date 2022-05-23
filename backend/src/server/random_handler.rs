@@ -9,7 +9,7 @@ use crate::{
         anecdote::Anecdote,
         joke::Joke,
         punch::Punch,
-        shrimp::{Category, Query, Shrimp},
+        shrimp::{Category, Shrimp},
     },
 };
 
@@ -22,21 +22,21 @@ pub fn random<'f>(
     author: Option<&str>,
     lang: Option<&str>,
 ) -> Result<Value, HubError> {
-    let q = Query { author, uniq, lang };
-
     match Category::random(&category) {
         Category::Anecdote => {
-            let result = Shrimp::<Anecdote>::get_random(Varys::get(client, Varys::Anecdote), q)?;
+            let result =
+                Shrimp::<Anecdote>::get_random(Varys::get(client, Varys::Anecdote), author, lang)?;
 
             Ok(result.tariffing(_tariff.0, _tariff.1))
         }
         Category::Joke => {
-            let result = Shrimp::<Joke>::get_random(Varys::get(client, Varys::Joke), q)?;
+            let result = Shrimp::<Joke>::get_random(Varys::get(client, Varys::Joke), author, lang)?;
 
             Ok(result.tariffing(_tariff.0, _tariff.1))
         }
         Category::Punch => {
-            let result = Shrimp::<Punch>::get_random(Varys::get(client, Varys::Punch), q)?;
+            let result =
+                Shrimp::<Punch>::get_random(Varys::get(client, Varys::Punch), author, lang)?;
 
             Ok(result.tariffing(_tariff.0, _tariff.1))
         }
