@@ -59,16 +59,13 @@ pub async fn login<'f>(
 }
 
 #[get("/account")]
-pub async fn account<'f>(
-    client: MongoConn<'f>,
-    _auth: AuthGuard,
-) -> Result<Json<UserResp>, HubError> {
+pub async fn account<'f>(client: MongoConn<'f>, _auth: AuthGuard) -> Result<Value, HubError> {
     let result = User::get_by_username(
         Varys::get(client.0.as_ref(), Varys::Users),
         _auth.0.get_username(),
     )?;
 
-    Ok(Json(UserResp::from(result)))
+    Ok(result.secure())
 }
 
 #[post("/account/token/refresh", data = "<jrt>")]
@@ -125,22 +122,22 @@ pub fn logout<'f>(
         } else {
             Ok(())
         }
-    })?;
-
-    Ok(())
+    })
 }
 
 #[delete("/account/delete")]
 pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(), HubError> {
-    User::del_by_username(Varys::get(client.0.as_ref(), Varys::Users), _auth.0.get_username()).and_then(
-        |d_result| {
-            if d_result.deleted_count < 1 {
-                Err(err_not_found!("user"))
-            } else {
-                Ok(())
-            }
-        },
+    User::del_by_username(
+        Varys::get(client.0.as_ref(), Varys::Users),
+        _auth.0.get_username(),
     )
+    .and_then(|d_result| {
+        if d_result.deleted_count < 1 {
+            Err(err_not_found!("user"))
+        } else {
+            Ok(())
+        }
+    })
 }
 
 #[put("/privilege/<username>/<level>")]

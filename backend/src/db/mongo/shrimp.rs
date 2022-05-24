@@ -1,6 +1,4 @@
-use bson::Document;
 use mongodb::{bson::doc, sync::Collection};
-use rand::Rng;
 use rocket::serde::DeserializeOwned;
 use serde::Serialize;
 
@@ -8,23 +6,8 @@ use crate::{
     db::mongo::Crud,
     err_internal, err_not_found,
     errors::HubError,
-    model::shrimp::{Flag, Paws, Shrimp},
+    model::shrimp::{filter::Filter, Paws, Shrimp},
 };
-
-macro_rules! macro_filter {
-    ($co:literal, $ri:expr, $( ($k:literal, $v:expr)), *) => {
-        {
-            let mut filter = doc! {"_header.rfd": {$co: $ri}};
-            $(
-                if $v.is_some() {
-                    filter.insert($k, $v);
-                }
-            )*
-
-            filter
-        }
-    };
-}
 
 impl<'a, T> Crud<'a, Shrimp<T>> for Shrimp<T>
 where
@@ -56,38 +39,22 @@ where
 {
     pub fn get_random(
         collection: Collection<Shrimp<T>>,
-        author: Option<&str>,
-        lang: Option<&str>,
-        flags: Option<Vec<Flag>>,
+        filter: Filter,
     ) -> Result<Shrimp<T>, HubError> {
-        let r = rand::thread_rng().gen::<u32>();
+        let filter = filter.gen();
         let update = doc! {"$inc": {"_header.counter": 1}};
-        let filter = macro_filter!(
-            "$gt",
-            r,
-            ("_meta-data.language", lang),
-            ("_meta-data.author", author)
-        );
 
-        match collection.find_one_and_update(add_flags(filter, flags.clone()), update.clone(), None)
-        {
+        match collection.find_one_and_update(filter.0, update.clone(), None) {
             Ok(result) => {
                 if let Some(shrimp) = result {
                     Ok(shrimp)
                 } else {
-                    let filter = macro_filter!(
-                        "$lte",
-                        r,
-                        ("_meta-data.language", lang),
-                        ("_meta-data.author", author)
-                    );
-
-                    match collection.find_one_and_update(add_flags(filter, flags), update, None) {
+                    match collection.find_one_and_update(filter.1, update, None) {
                         Ok(result) => {
                             if let Some(shrimp) = result {
                                 Ok(shrimp)
                             } else {
-                               // Коллекция пуста или не содержит записей соответствующих указанным параметрам фильтрации
+                                // Коллекция пуста или не содержит записей соответствующих указанным параметрам фильтрации
                                 let error = err_not_found!("records");
 
                                 Err(error)
@@ -101,17 +68,5 @@ where
 
             Err(err) => Err(err_internal!(err.to_string())),
         }
-    }
-}
-
-fn add_flags(mut base: Document, flags: Option<Vec<Flag>>) -> Document {
-    if flags.is_some() {
-        for f in flags.unwrap().iter() {
-            base.insert(format!("_meta-data.flags.{}", f.to_string().to_lowercase()), true);
-        }
-
-        base.clone()
-    } else {
-        base.clone()
     }
 }

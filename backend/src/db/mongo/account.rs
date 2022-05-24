@@ -1,4 +1,5 @@
 use bson::Document;
+use mongodb::bson::DateTime as MongoDateTime;
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::sync::Client;
 use mongodb::{bson::doc, sync::Collection};
@@ -6,7 +7,7 @@ use mongodb::{bson::doc, sync::Collection};
 use crate::model::account::{security::Session, User};
 use crate::{
     db::mongo::{varys::Varys, Crud},
-    err_unauthorized,
+    err_not_found, err_unauthorized,
     errors::HubError,
 };
 
@@ -19,7 +20,7 @@ impl<'a> User {
     ) -> Result<User, HubError> {
         match collection.find_one(doc! { "username":  username}, None)? {
             Some(value) => Ok(value),
-            None => Err(HubError::new_not_found("User is not found.", None)),
+            None => Err(err_not_found!("user")),
         }
     }
 
@@ -38,7 +39,7 @@ impl<'a> User {
         level: &str,
     ) -> Result<UpdateResult, HubError> {
         let filter = doc! {"username": username};
-        let update = doc! {"$set": {"level": level}};
+        let update = doc! {"$set": {"level": level, "updated_at": MongoDateTime::now()}};
 
         let res = collection.update_one(filter, update, None)?;
 

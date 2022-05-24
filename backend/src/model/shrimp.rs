@@ -1,5 +1,5 @@
-use chrono::{NaiveDateTime, Utc};
 use lingua::Language;
+use mongodb::bson::DateTime as MongoDateTime;
 use rand::prelude::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ use crate::errors::HubError;
 pub struct Head {
     pub counter: usize,
     pub rfd: u32,
-    pub timestamp: NaiveDateTime,
+    pub timestamp: MongoDateTime,
 }
 
 impl Head {
@@ -23,7 +23,7 @@ impl Head {
         Head {
             counter: 0,
             rfd: rand::thread_rng().gen::<u32>(),
-            timestamp: Utc::now().naive_utc(),
+            timestamp: MongoDateTime::now(),
         }
     }
 }
@@ -42,7 +42,6 @@ impl fmt::Display for Flag {
         write!(f, "{:?}", self)
     }
 }
-
 
 /// Флаги деликатности контента
 #[derive(Clone, Serialize, Deserialize)]
@@ -175,8 +174,8 @@ where
     pub fn tariffing(&self, tariff: Tariff, err: Option<HubError>) -> Value {
         match tariff {
             Tariff::Free => {
-                let mut base = json!(self.body);
-                Self::err_union(&mut base, err)
+                let base = json!(self.body);
+                Self::err_union(base, err)
             }
             Tariff::Basic => {
                 let mut base = json!({"id": self.id});
@@ -184,15 +183,15 @@ where
                 Self::merge(&mut base, json!(self.body));
                 Self::merge(&mut base, json!({"_meta-data": self.tail}));
 
-                Self::err_union(&mut base, err)
+                Self::err_union(base, err)
             }
             Tariff::Standart => {
-                let mut base = json!(self);
-                Self::err_union(&mut base, err)
+                let base = json!(self);
+                Self::err_union(base, err)
             }
             Tariff::Enterprice => {
-                let mut base = json!(self);
-                Self::err_union(&mut base, err)
+                let base = json!(self);
+                Self::err_union(base, err)
             }
         }
     }
@@ -211,13 +210,13 @@ where
     }
 
     /// Слияние базового json объекта и объекта ошибок (если они возникли)
-    fn err_union(base: &mut Value, err: Option<HubError>) -> Value {
-        if let Some(e) = err {
-            Self::merge(base, json!({ "errors": e }));
+    fn err_union(mut base: Value, err: Option<HubError>) -> Value {
+        if err.is_some() {
+            Self::merge(&mut base, json!({ "errors": err.unwrap() }));
 
-            base.clone()
+            base
         } else {
-            base.clone()
+            base
         }
     }
 }
@@ -238,21 +237,102 @@ impl Category {
     /// Выбор случайной категории.
     /// Если есть предпочитаемые категории, выбирается случайная из предоставленных.
     /// Если список предпочтений пуст, выбирается из общего списка категоий.
-    pub fn random(list: &Option<Vec<Category>>) -> Category {
+    pub fn random(mut list: Option<Vec<Category>>) -> Category {
         use super::shrimp::Category::{Anecdote, Joke, Punch};
 
-        match list {
-            Some(v) => v.choose(&mut rand::thread_rng()).unwrap().clone(),
-            None => {
-                let v = vec![Anecdote, Joke, Punch];
-                v.choose(&mut rand::thread_rng()).unwrap().clone()
-            }
-        }
+        list.get_or_insert(vec![Anecdote, Joke, Punch])
+            .choose(&mut rand::thread_rng())
+            .unwrap()
+            .to_owned()
     }
 }
 
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+pub mod filter {
+    //! Модуль фильтрации контента
+    use bson::Document;
+    use mongodb::bson::doc;
+    use rand::Rng;
+
+    macro_rules! macro_filter {
+        ($co:literal, $ri:expr, $( ($k:literal, $v:expr)), *) => {
+            {
+                let mut filter = doc! {"_header.rfd": {$co: $ri}};
+                $(
+                    if $v.is_some() {
+                        filter.insert($k, $v);
+                    }
+                )*
+
+                filter
+            }
+        };
+    }
+
+    pub struct Filter<'a> {
+        // Случайное число от которого будет осуществляться поиск
+        ri: u32,
+        author: Option<&'a str>,
+        language: Option<&'a str>,
+        flags: Option<Vec<super::Flag>>,
+    }
+
+    impl<'a> Filter<'a> {
+        pub fn new(
+            author: Option<&'a str>,
+            language: Option<&'a str>,
+            flags: Option<Vec<super::Flag>>,
+        ) -> Self {
+            Filter {
+                ri: rand::thread_rng().gen::<u32>(),
+                author,
+                language,
+                flags,
+            }
+        }
+
+        /// Генерация набора фильтров
+        /// Первый документ сгенерирован для $gt поиска
+        /// Второй для $lte поиска
+        pub fn gen(&self) -> (Document, Document) {
+            let mut gt = macro_filter!(
+                "$gt",
+                self.ri,
+                ("_meta-data.language", self.language),
+                ("_meta-data.author", self.author)
+            );
+            gt = self.add_flags(Box::new(gt));
+
+            let mut lte = macro_filter!(
+                "$lte",
+                self.ri,
+                ("_meta-data.language", self.language),
+                ("_meta-data.author", self.author)
+            );
+            lte = self.add_flags(Box::new(lte));
+
+            (gt, lte)
+        }
+
+        /// Метод добавления флагов (если они указаны явно) в общий объект фильтрации
+        fn add_flags(&'a self, mut d: Box<Document>) -> Document {
+            if self.flags.is_some() {
+                for f in self.flags.as_ref().unwrap() {
+                    d.insert(
+                        format!("_meta-data.flags.{}", f.to_string().to_lowercase()),
+                        true,
+                    );
+                }
+
+                *d
+            } else {
+                *d
+            }
+        }
     }
 }

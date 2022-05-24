@@ -37,8 +37,8 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$fwgzbnRyxZiEVtwa5X42gWFVcOpkI3QY6iTRpUqbmDQ\$PRJm/l7Wlee/0i4bfHKEdWx3mpfHlIKH+hJqDPDP/rU",
             "level": "sith",
             "tariff": "enterprice",
-            "created_at": "2022-05-21T08:49:20.516119282",
-            "updated_at": "2022-05-21T08:49:20.516119963"
+            "created_at": new Date(),
+            "updated_at": new Date()
         }
     );
     db.users.insertOne(
@@ -48,8 +48,8 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$fwgzbnRyxZiEVtwa5X42gWFVcOpkI3QY6iTRpUqbmDQ\$PRJm/l7Wlee/0i4bfHKEdWx3mpfHlIKH+hJqDPDP/rU",
             "level": "master",
             "tariff": "enterprice",
-            "created_at": "2022-05-21T08:49:20.516119282",
-            "updated_at": "2022-05-21T08:49:20.516119963"
+            "created_at": new Date(),
+            "updated_at": new Date()
         }
     );
     db.users.insertOne(
@@ -59,8 +59,8 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$fwgzbnRyxZiEVtwa5X42gWFVcOpkI3QY6iTRpUqbmDQ\$PRJm/l7Wlee/0i4bfHKEdWx3mpfHlIKH+hJqDPDP/rU",
             "level": "padawan",
             "tariff": "free",
-            "created_at": "2022-05-21T08:49:20.516119282",
-            "updated_at": "2022-05-21T08:49:20.516119963"
+            "created_at": new Date(),
+            "updated_at": new Date()
         }
     );
 

@@ -1,7 +1,8 @@
 use argon2::Config;
-use chrono::{NaiveDateTime, Utc};
+use mongodb::bson::DateTime as MongoDateTime;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::fmt;
 use strum_macros::EnumIter;
 use uuid::Uuid;
@@ -9,22 +10,6 @@ use validator::Validate;
 
 use super::validation::validate_query;
 use crate::errors::HubError;
-
-/// Тело запроса при регистрации пользователя
-#[derive(Clone, Validate, Deserialize)]
-pub struct NewUser {
-    #[validate(
-        length(min = 4, max = 10, message = "Lenght is invalid"),
-        custom(function = "validate_query", message = "Invalid format")
-    )]
-    pub username: String,
-
-    #[validate(
-        length(min = 8, max = 20, message = "Lenght is invalid"),
-        custom(function = "validate_query", message = "Invalid format")
-    )]
-    pub password: String,
-}
 
 /// Уровни доступа доступные в системе
 #[derive(Clone, Serialize, PartialEq, EnumIter, Deserialize, Debug)]
@@ -67,6 +52,22 @@ impl Default for Tariff {
     }
 }
 
+/// Тело запроса при регистрации пользователя
+#[derive(Clone, Validate, Deserialize)]
+pub struct NewUser {
+    #[validate(
+        length(min = 4, max = 10, message = "Lenght is invalid"),
+        custom(function = "validate_query", message = "Invalid format")
+    )]
+    pub username: String,
+
+    #[validate(
+        length(min = 8, max = 20, message = "Lenght is invalid"),
+        custom(function = "validate_query", message = "Invalid format")
+    )]
+    pub password: String,
+}
+
 /// Нативная структура пользовательских данных
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
@@ -79,8 +80,8 @@ pub struct User {
     pub level: Level,
     pub tariff: Tariff,
 
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
+    pub created_at: MongoDateTime,
+    pub updated_at: MongoDateTime,
 }
 
 impl From<NewUser> for User {
@@ -91,8 +92,8 @@ impl From<NewUser> for User {
             level: Level::Padawan,
             tariff: Tariff::Free,
             hash: nu.password,
-            created_at: Utc::now().naive_utc(),
-            updated_at: Utc::now().naive_utc(),
+            created_at: MongoDateTime::now(),
+            updated_at: MongoDateTime::now(),
         }
     }
 }
@@ -118,26 +119,15 @@ impl<'a> User {
 
         Ok(self.clone())
     }
-}
 
-/// Тело ответа при запросе личной информации
-/// В отличии от оригинальной структуры не содержит хеша пароля и уровня доступа
-#[derive(Clone, Serialize, Deserialize)]
-pub struct UserResp {
-    pub username: String,
-    pub tariff: Tariff,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-impl From<User> for UserResp {
-    fn from(u: User) -> Self {
-        UserResp {
-            username: u.username,
-            tariff: u.tariff,
-            created_at: u.created_at,
-            updated_at: u.updated_at,
-        }
+    /// Убрать деликатную пользовательскую информацию
+    pub fn secure(&self) -> Value {
+        json!({
+            "username": self.username,
+            "tariff": self.tariff,
+            "created_at": self.created_at.to_rfc3339_string(),
+            "updated_at": self.updated_at.to_rfc3339_string(),
+        })
     }
 }
 

@@ -37,8 +37,8 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$polzlXI0YXGFxBp2aFq8orG8XG/VhwlBTlyLP+ZSrCE\$$MONGO_JOKERHUB_SITH_HASH",
             "level": "sith",
             "tariff": "enterprice",
-            "created_at": "2022-05-21T08:49:20.516119282",
-            "updated_at": "2022-05-21T08:49:20.516119963"
+            "created_at": new Date(),
+            "updated_at": new Date(),
         }
     );
 

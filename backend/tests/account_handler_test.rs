@@ -2,12 +2,12 @@ mod common;
 
 use rocket::http::{ContentType, Header, Status};
 use rocket::local::blocking::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use common::accounts::TestPadawan;
 use jokehub::model::account::{
     security::{AccessClaims, RefreshClaims, Tokens},
-    Tariff, UserResp,
+    Tariff,
 };
 
 use common::accounts as account;
@@ -69,6 +69,14 @@ fn account_padawan() {
                 .dispatch();
 
             assert_eq!(resp.status(), Status::Ok);
+
+            #[derive(Serialize, Deserialize)]
+            pub struct UserResp {
+                pub username: String,
+                pub tariff: Tariff,
+                pub created_at: String,
+                pub updated_at: String,
+            }
 
             let body = assert_body!(resp, UserResp);
 
