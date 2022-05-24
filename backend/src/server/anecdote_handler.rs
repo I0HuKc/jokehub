@@ -30,7 +30,10 @@ pub async fn create_anecdote<'f>(
     );
     let body = Anecdote::from(jna.0);
 
-    let result = Shrimp::create(Varys::get(client, Varys::Anecdote), Shrimp::new(body, tail))?;
+    let result = Shrimp::create(
+        Varys::get(client.0.as_ref(), Varys::Anecdote),
+        Shrimp::new(body, tail),
+    )?;
 
     let resp = json!({"id": result.inserted_id});
     Ok(resp)
@@ -42,8 +45,10 @@ pub async fn get_anecdote<'f>(
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<Value, HubError> {
-    let result: Shrimp<Anecdote> =
-        Shrimp::get_by_id(Varys::get(client, Varys::Anecdote), uuid_validation(id)?)?;
+    let result: Shrimp<Anecdote> = Shrimp::get_by_id(
+        Varys::get(client.0.as_ref(), Varys::Anecdote),
+        uuid_validation(id)?,
+    )?;
 
     Ok(result.tariffing(_tariff.0, _tariff.1))
 }
@@ -54,12 +59,15 @@ pub async fn delete_anecdote<'f>(
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<(), HubError> {
-    Shrimp::<Anecdote>::del_by_id(Varys::get(client, Varys::Anecdote), uuid_validation(id)?)
-        .and_then(|d_result| {
-            if d_result.deleted_count < 1 {
-                Err(err_not_found!("anecdote"))
-            } else {
-                Ok(())
-            }
-        })
+    Shrimp::<Anecdote>::del_by_id(
+        Varys::get(client.0.as_ref(), Varys::Anecdote),
+        uuid_validation(id)?,
+    )
+    .and_then(|d_result| {
+        if d_result.deleted_count < 1 {
+            Err(err_not_found!("anecdote"))
+        } else {
+            Ok(())
+        }
+    })
 }

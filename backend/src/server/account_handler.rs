@@ -27,7 +27,7 @@ pub async fn registration<'f>(
     jnu.0.validate()?;
 
     let result = User::create(
-        Varys::get(client, Varys::Users),
+        Varys::get(client.0.as_ref(), Varys::Users),
         User::from(jnu.0).password_hashing()?,
     )?;
 
@@ -42,13 +42,15 @@ pub async fn login<'f>(
 ) -> Result<Json<Tokens>, HubError> {
     jnu.0.validate()?;
 
-    let result = User::get_by_username(Varys::get(client.clone(), Varys::Users), jnu.0.username)?;
+    let result =
+        User::get_by_username(Varys::get(client.0.as_ref(), Varys::Users), jnu.0.username)?;
 
     if result.password_verify(format!("{}", jnu.0.password).as_bytes())? {
         let tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;
 
         // Сохранение токена обновления
-        Session::new(result.username.clone(), tokens.refresh_token.clone()).set(client)?;
+        Session::new(result.username.clone(), tokens.refresh_token.clone())
+            .set(client.0.as_ref())?;
 
         Ok(Json(tokens))
     } else {
@@ -61,7 +63,10 @@ pub async fn account<'f>(
     client: MongoConn<'f>,
     _auth: AuthGuard,
 ) -> Result<Json<UserResp>, HubError> {
-    let result = User::get_by_username(Varys::get(client, Varys::Users), _auth.0.get_username())?;
+    let result = User::get_by_username(
+        Varys::get(client.0.as_ref(), Varys::Users),
+        _auth.0.get_username(),
+    )?;
 
     Ok(Json(UserResp::from(result)))
 }
@@ -75,7 +80,7 @@ pub fn refresh_token<'f>(
     let refresh_claims = Tokens::decode_token::<RefreshClaims>(jrt.0.refresh_token)?.claims;
 
     // Удаляю старый токен
-    Session::drop(jrt.0.refresh_token, client.clone()).and_then(|res| {
+    Session::drop(jrt.0.refresh_token, client.0.as_ref()).and_then(|res| {
         // Если токена не существовало
         if res.deleted_count != 1 {
             Err(err_unauthorized!("Token is not found"))
@@ -86,7 +91,7 @@ pub fn refresh_token<'f>(
 
     // Достаю пользователя из БД
     let result = User::get_by_username(
-        Varys::get(client.clone(), Varys::Users),
+        Varys::get(client.0.as_ref(), Varys::Users),
         refresh_claims.get_username(),
     )?;
 
@@ -98,7 +103,7 @@ pub fn refresh_token<'f>(
         refresh_claims.get_username(),
         new_tokens.clone().refresh_token,
     )
-    .set(client.clone())?;
+    .set(client.0.as_ref())?;
 
     Ok(Json(new_tokens))
 }
@@ -113,7 +118,7 @@ pub fn logout<'f>(
     Tokens::decode_token::<RefreshClaims>(jrt.0.refresh_token)?;
 
     // Удаляю токен
-    Session::drop(jrt.0.refresh_token, client.clone()).and_then(|res| {
+    Session::drop(jrt.0.refresh_token, client.0.as_ref()).and_then(|res| {
         // Если токена не существовало
         if res.deleted_count != 1 {
             Err(err_unauthorized!("Token is not found"))
@@ -127,7 +132,7 @@ pub fn logout<'f>(
 
 #[delete("/account/delete")]
 pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(), HubError> {
-    User::del_by_username(Varys::get(client, Varys::Users), _auth.0.get_username()).and_then(
+    User::del_by_username(Varys::get(client.0.as_ref(), Varys::Users), _auth.0.get_username()).and_then(
         |d_result| {
             if d_result.deleted_count < 1 {
                 Err(err_not_found!("user"))
@@ -146,7 +151,7 @@ pub async fn privilege<'f>(
     level: &str,
 ) -> Result<(), HubError> {
     User::privilege_set(
-        Varys::get(client, Varys::Users),
+        Varys::get(client.0.as_ref(), Varys::Users),
         query_validation(username)?,
         level_validation(level)?,
     )

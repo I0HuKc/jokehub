@@ -1,5 +1,5 @@
 use lingua::{
-    IsoCode639_1, Language,
+    Language,
     Language::{English, Russian},
     LanguageDetector, LanguageDetectorBuilder,
 };
@@ -14,14 +14,14 @@ use crate::errors::HubError;
 pub struct Lingua<'a>(pub &'a State<Box<LanguageDetector>>);
 
 impl<'a> Lingua<'a> {
-    pub fn detected<T>(self, text: T) -> Result<IsoCode639_1, HubError>
+    pub fn detected<T>(self, text: T) -> Result<Language, HubError>
     where
         T: Into<String>,
     {
         match self.0.detect_language_of(text) {
             Some(language) => match language {
-                English => Ok(Language::English.iso_code_639_1()),
-                Russian => Ok(Language::Russian.iso_code_639_1()),
+                English => Ok(Language::English),
+                Russian => Ok(Language::Russian),
             },
 
             None => {

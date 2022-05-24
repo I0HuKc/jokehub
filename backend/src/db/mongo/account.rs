@@ -1,5 +1,6 @@
 use bson::Document;
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
+use mongodb::sync::Client;
 use mongodb::{bson::doc, sync::Collection};
 
 use crate::model::account::{security::Session, User};
@@ -8,8 +9,6 @@ use crate::{
     err_unauthorized,
     errors::HubError,
 };
-
-use super::MongoConn;
 
 impl<'a> Crud<'a, User> for User {}
 
@@ -48,7 +47,7 @@ impl<'a> User {
 }
 
 impl Session {
-    pub fn set<'f>(&self, client: MongoConn<'f>) -> Result<InsertOneResult, HubError> {
+    pub fn set<'f>(&self, client: &Client) -> Result<InsertOneResult, HubError> {
         let collection: Collection<Document> = Varys::get(client, Varys::Sessions);
         let doc = bson::to_document(&self)?;
         let rersult = collection.insert_one(doc, None)?;
@@ -56,7 +55,7 @@ impl Session {
         Ok(rersult)
     }
 
-    pub fn check<'f>(token: &str, client: MongoConn<'f>) -> Result<Session, HubError> {
+    pub fn check<'f>(token: &str, client: &Client) -> Result<Session, HubError> {
         let collection: Collection<Session> = Varys::get(client, Varys::Sessions);
         match collection.find_one(doc! { "token":  token}, None)? {
             Some(value) => Ok(value),
@@ -64,7 +63,7 @@ impl Session {
         }
     }
 
-    pub fn drop<'f>(token: &str, client: MongoConn<'f>) -> Result<DeleteResult, HubError> {
+    pub fn drop<'f>(token: &str, client: &Client) -> Result<DeleteResult, HubError> {
         let collection: Collection<Session> = Varys::get(client, Varys::Sessions);
         match collection.delete_one(doc! { "token":  token}, None) {
             Ok(dr) => Ok(dr),

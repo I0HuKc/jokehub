@@ -1,5 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
-use lingua::IsoCode639_1;
+use lingua::Language;
 use rand::prelude::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -120,7 +120,7 @@ pub(crate) fn default_tags() -> Vec<String> {
 }
 
 impl Tail {
-    pub fn new(flags: Flags, lang: IsoCode639_1, author: String, tags: &Vec<String>) -> Self {
+    pub fn new(flags: Flags, lang: Language, author: String, tags: &Vec<String>) -> Self {
         Tail {
             flags,
             lang: lang.to_string(),

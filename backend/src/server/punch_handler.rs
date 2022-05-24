@@ -34,7 +34,10 @@ pub async fn create_punch<'f>(
     );
     let body = Punch::from(jnp.0);
 
-    let result = Shrimp::create(Varys::get(client, Varys::Punch), Shrimp::new(body, tail))?;
+    let result = Shrimp::create(
+        Varys::get(client.0.as_ref(), Varys::Punch),
+        Shrimp::new(body, tail),
+    )?;
 
     let resp = json!({"id": result.inserted_id});
     Ok(resp)
@@ -46,8 +49,10 @@ pub async fn get_punch<'f>(
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<Value, HubError> {
-    let result: Shrimp<Punch> =
-        Shrimp::get_by_id(Varys::get(client, Varys::Punch), uuid_validation(id)?)?;
+    let result: Shrimp<Punch> = Shrimp::get_by_id(
+        Varys::get(client.0.as_ref(), Varys::Punch),
+        uuid_validation(id)?,
+    )?;
 
     Ok(result.tariffing(_tariff.0, _tariff.1))
 }
@@ -58,13 +63,15 @@ pub async fn delete_punch<'f>(
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<(), HubError> {
-    Shrimp::<Punch>::del_by_id(Varys::get(client, Varys::Punch), uuid_validation(id)?).and_then(
-        |d_result| {
-            if d_result.deleted_count < 1 {
-                Err(err_not_found!("punch"))
-            } else {
-                Ok(())
-            }
-        },
+    Shrimp::<Punch>::del_by_id(
+        Varys::get(client.0.as_ref(), Varys::Punch),
+        uuid_validation(id)?,
     )
+    .and_then(|d_result| {
+        if d_result.deleted_count < 1 {
+            Err(err_not_found!("punch"))
+        } else {
+            Ok(())
+        }
+    })
 }
