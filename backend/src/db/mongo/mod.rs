@@ -22,6 +22,7 @@ use rocket::{
 
 use crate::err_not_found;
 
+#[derive(Clone)]
 pub struct MongoConn<'a>(pub &'a State<Box<Client>>);
 
 pub fn connect() -> Option<Client> {

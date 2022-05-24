@@ -157,6 +157,28 @@ pub mod security {
         errors::{ErrorKind, HubError, UnauthorizedErrorKind},
         model::account::{Level, Tariff},
     };
+    use mongodb::bson::DateTime as MongoDateTime;
+
+    #[derive(Serialize, Deserialize, Clone)]
+    pub struct Session {
+        token: String,
+        username: String,
+        stamp: MongoDateTime,
+    }
+
+    impl Session {
+        pub fn new(username: String, token: String) -> Self {
+            Session {
+                token,
+                username,
+                stamp: MongoDateTime::now(),
+            }
+        }
+
+        pub fn get_username(&self) -> String {
+            self.username.clone()
+        }
+    }
 
     const SECRET: &str = "secret297152aebda7";
 

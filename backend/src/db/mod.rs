@@ -1,11 +1,11 @@
 pub mod mongo;
-pub mod redis;
+// pub mod redis;
 
 use rocket::{Build, Rocket};
 
 pub trait DbManage {
     fn manage_mongodb(self) -> Self;
-    fn manage_redis(self) -> Self;
+    // fn manage_redis(self) -> Self;
 }
 
 impl DbManage for Rocket<Build> {
@@ -15,8 +15,8 @@ impl DbManage for Rocket<Build> {
         self.manage(mbox)
     }
 
-    fn manage_redis(self) -> Self {
-        self.manage(redis::connect())
-    }
+    // fn manage_redis(self) -> Self {
+    //     self.manage(redis::connect())
+    // }
 }
 

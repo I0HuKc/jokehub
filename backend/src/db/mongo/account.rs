@@ -1,8 +1,15 @@
-use mongodb::results::{DeleteResult, UpdateResult};
+use bson::Document;
+use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::{bson::doc, sync::Collection};
 
-use crate::model::account::User;
-use crate::{db::mongo::Crud, errors::HubError};
+use crate::model::account::{security::Session, User};
+use crate::{
+    db::mongo::{varys::Varys, Crud},
+    err_unauthorized,
+    errors::HubError,
+};
+
+use super::MongoConn;
 
 impl<'a> Crud<'a, User> for User {}
 
@@ -37,5 +44,31 @@ impl<'a> User {
         let res = collection.update_one(filter, update, None)?;
 
         Ok(res)
+    }
+}
+
+impl Session {
+    pub fn set<'f>(&self, client: MongoConn<'f>) -> Result<InsertOneResult, HubError> {
+        let collection: Collection<Document> = Varys::get(client, Varys::Sessions);
+        let doc = bson::to_document(&self)?;
+        let rersult = collection.insert_one(doc, None)?;
+
+        Ok(rersult)
+    }
+
+    pub fn check<'f>(token: &str, client: MongoConn<'f>) -> Result<Session, HubError> {
+        let collection: Collection<Session> = Varys::get(client, Varys::Sessions);
+        match collection.find_one(doc! { "token":  token}, None)? {
+            Some(value) => Ok(value),
+            None => Err(err_unauthorized!("Session is not found")),
+        }
+    }
+
+    pub fn drop<'f>(token: &str, client: MongoConn<'f>) -> Result<DeleteResult, HubError> {
+        let collection: Collection<Session> = Varys::get(client, Varys::Sessions);
+        match collection.delete_one(doc! { "token":  token}, None) {
+            Ok(dr) => Ok(dr),
+            Err(err) => Err(err_unauthorized!("Falid to drop token", err)),
+        }
     }
 }

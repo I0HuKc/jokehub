@@ -5,6 +5,7 @@ use crate::db::mongo::MongoConn;
 // Заведующий всеми коллекциями
 pub enum Varys {
     Users,
+    Sessions,
 
     Anecdote,
     Joke,
@@ -34,6 +35,11 @@ impl Varys {
                 .0
                 .database(dotenv!("MONGO_DATABASE_NAME"))
                 .collection("users"),
+
+            Varys::Sessions => client
+                .0
+                .database(dotenv!("MONGO_DATABASE_NAME"))
+                .collection("sessions"),
         }
     }
 }

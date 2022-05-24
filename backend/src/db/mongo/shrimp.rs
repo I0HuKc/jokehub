@@ -87,6 +87,7 @@ where
                             if let Some(shrimp) = result {
                                 Ok(shrimp)
                             } else {
+                               // Коллекция пуста или не содержит записей соответствующих указанным параметрам фильтрации
                                 let error = err_not_found!("records");
 
                                 Err(error)

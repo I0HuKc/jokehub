@@ -20,8 +20,7 @@ use {
 #[launch]
 pub fn rocket() -> _ {
     rocket::custom(config::from_env())
-        .manage_mongodb()
-        .manage_redis()
+        .manage_mongodb()    
         .manage_lingua()
         .mount("/", rocket::routes![ping])
         .mount(

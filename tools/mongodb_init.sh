@@ -91,4 +91,14 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             }
         }
     );
+
+    db.createCollection("sessions");
+    db.sessions.createIndex(
+        {
+            "stamp" : 1
+        }, 
+        {
+            "expireAfterSeconds" : 60 * 60 * 24 * 7
+        }
+    )
 EOF

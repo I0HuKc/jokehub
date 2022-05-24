@@ -1,5 +1,4 @@
 use mongodb::bson::doc;
-use r2d2_redis::redis::Commands;
 use rocket::serde::json::Json;
 
 use serde_json::{json, Value};
@@ -8,12 +7,11 @@ use validator::Validate;
 use crate::{
     db::mongo::MongoConn,
     db::mongo::{varys::Varys, Crud},
-    db::redis::RedisConn,
-    err_internal, err_not_found, err_unauthorized,
+    err_not_found, err_unauthorized,
     errors::HubError,
     model::{
         account::{
-            security::{AuthGuard, RefreshClaims, RefreshResp, SithGuard, Tokens},
+            security::{AuthGuard, RefreshClaims, RefreshResp, Session, SithGuard, Tokens},
             validation::level_validation,
             *,
         },
@@ -40,24 +38,17 @@ pub async fn registration<'f>(
 #[post("/login", data = "<jnu>")]
 pub async fn login<'f>(
     client: MongoConn<'f>,
-    mut redis: RedisConn,
     jnu: Json<NewUser>,
 ) -> Result<Json<Tokens>, HubError> {
     jnu.0.validate()?;
 
-    let result = User::get_by_username(Varys::get(client, Varys::Users), jnu.0.username)?;
+    let result = User::get_by_username(Varys::get(client.clone(), Varys::Users), jnu.0.username)?;
 
     if result.password_verify(format!("{}", jnu.0.password).as_bytes())? {
         let tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;
 
-        // Сохранение токена обновления в redis
-        redis
-            .set_ex::<String, String, ()>(
-                tokens.refresh_token.clone(),
-                result.username.clone(),
-                60 * 60 * 24 * 7,
-            )
-            .map_err(|err| err_internal!("Falid to set in redis", err))?;
+        // Сохранение токена обновления
+        Session::new(result.username.clone(), tokens.refresh_token.clone()).set(client)?;
 
         Ok(Json(tokens))
     } else {
@@ -78,33 +69,36 @@ pub async fn account<'f>(
 #[post("/account/token/refresh", data = "<jrt>")]
 pub fn refresh_token<'f>(
     client: MongoConn<'f>,
-    mut redis: RedisConn,
     jrt: Json<RefreshResp<'f>>,
 ) -> Result<Json<Tokens>, HubError> {
     // Валидирую входярий токен
     let refresh_claims = Tokens::decode_token::<RefreshClaims>(jrt.0.refresh_token)?.claims;
 
     // Удаляю старый токен
-    redis
-        .del::<&str, usize>(jrt.0.refresh_token)
-        .map_err(|err| err_unauthorized!("Falid to drop token", err))
-        .and_then(|res| {
-            // Если токена не существовало
-            if res != 1 {
-                Err(err_unauthorized!("Token is not found"))
-            } else {
-                Ok(())
-            }
-        })?;
+    Session::drop(jrt.0.refresh_token, client.clone()).and_then(|res| {
+        // Если токена не существовало
+        if res.deleted_count != 1 {
+            Err(err_unauthorized!("Token is not found"))
+        } else {
+            Ok(())
+        }
+    })?;
 
     // Достаю пользователя из БД
     let result = User::get_by_username(
-        Varys::get(client, Varys::Users),
+        Varys::get(client.clone(), Varys::Users),
         refresh_claims.get_username(),
     )?;
 
     // Создаю новую пару токенов
     let new_tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;
+
+    // Сохраняю новые токены
+    Session::new(
+        refresh_claims.get_username(),
+        new_tokens.clone().refresh_token,
+    )
+    .set(client.clone())?;
 
     Ok(Json(new_tokens))
 }
@@ -112,24 +106,21 @@ pub fn refresh_token<'f>(
 #[post("/account/logout", data = "<jrt>")]
 pub fn logout<'f>(
     _auth: AuthGuard,
-    mut redis: RedisConn,
+    client: MongoConn<'f>,
     jrt: Json<RefreshResp<'f>>,
 ) -> Result<(), HubError> {
     // Валидирую входярий токен
     Tokens::decode_token::<RefreshClaims>(jrt.0.refresh_token)?;
 
     // Удаляю токен
-    redis
-        .del::<&str, usize>(jrt.0.refresh_token)
-        .map_err(|err| err_unauthorized!("Falid to drop token", err))
-        .and_then(|res| {
-            // Если токена не существовало
-            if res != 1 {
-                Err(err_unauthorized!("Token is not found"))
-            } else {
-                Ok(())
-            }
-        })?;
+    Session::drop(jrt.0.refresh_token, client.clone()).and_then(|res| {
+        // Если токена не существовало
+        if res.deleted_count != 1 {
+            Err(err_unauthorized!("Token is not found"))
+        } else {
+            Ok(())
+        }
+    })?;
 
     Ok(())
 }
