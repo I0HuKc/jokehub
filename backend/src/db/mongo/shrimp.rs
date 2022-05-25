@@ -37,8 +37,21 @@ where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,
     T: Paws,
 {
+    pub fn inc_counter(&self, collection: &Collection<Shrimp<T>>) -> Result<&Self, HubError> {
+        let query = doc! {"_id": self.id.clone()};
+        let update = doc! {"$inc": {"_header.counter": 1}};
+
+        match collection.update_one(query, update, None) {
+            Ok(_) => Ok(self),
+            Err(err) => Err(err_internal!(
+                "Faild to increment record counter",
+                err.to_string()
+            )),
+        }
+    }
+
     pub fn get_random(
-        collection: Collection<Shrimp<T>>,
+        collection: &Collection<Shrimp<T>>,
         qilter: &Qilter,
     ) -> Result<Option<Shrimp<T>>, HubError> {
         let data = collection
@@ -128,14 +141,6 @@ pub mod aggregation {
             pipeline.push(doc! {
               "$sample": {
                 "size": 1
-              }
-            });
-
-            pipeline.push(doc! {
-              "$set": {
-                "_header.counter": {
-                    "$add": ["$_header.counter", 1]
-                }
               }
             });
 

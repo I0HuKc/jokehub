@@ -30,44 +30,56 @@ pub fn random<'f>(
     while random_category.is_some() {
         match random_category.as_ref().unwrap() {
             Category::Anecdote => {
-                let result = Shrimp::<Anecdote>::get_random(
-                    Varys::get(client.0.as_ref(), Varys::Anecdote),
-                    &qilter,
-                )?;
+                let collection = Varys::get::<Shrimp<Anecdote>>(client.0.as_ref(), Varys::Anecdote);
+                let result = Shrimp::<Anecdote>::get_random(&collection, &qilter)?;
 
                 if result.is_none() {
                     (random_category, allowed_category) =
                         Category::random(Some(allowed_category), false);
                 } else {
-                    return Ok(result.unwrap().tariffing(&_tariff.0, &_tariff.1));
+                    let resp = result
+                        .as_ref()
+                        .unwrap()
+                        .inc_counter(&collection)?
+                        .tariffing(&_tariff.0, &_tariff.1);
+
+                    return Ok(resp);
                 }
             }
 
             Category::Joke => {
-                let result = Shrimp::<Joke>::get_random(
-                    Varys::get(client.0.as_ref(), Varys::Joke),
-                    &qilter,
-                )?;
+                let collection = Varys::get::<Shrimp<Joke>>(client.0.as_ref(), Varys::Joke);
+                let result = Shrimp::<Joke>::get_random(&collection, &qilter)?;
 
                 if result.is_none() {
                     (random_category, allowed_category) =
                         Category::random(Some(allowed_category), false);
                 } else {
-                    return Ok(result.unwrap().tariffing(&_tariff.0, &_tariff.1));
+                    let resp = result
+                        .as_ref()
+                        .unwrap()
+                        .inc_counter(&collection)?
+                        .tariffing(&_tariff.0, &_tariff.1);
+
+                    return Ok(resp);
                 }
             }
 
             Category::Punch => {
-                let result = Shrimp::<Punch>::get_random(
-                    Varys::get(client.0.as_ref(), Varys::Punch),
-                    &qilter,
-                )?;
+                let collection = Varys::get::<Shrimp<Punch>>(client.0.as_ref(), Varys::Punch);
+                let result = Shrimp::<Punch>::get_random(&collection, &qilter)?;
 
                 if result.is_none() {
                     (random_category, allowed_category) =
                         Category::random(Some(allowed_category), false);
                 } else {
-                    return Ok(result.unwrap().tariffing(&_tariff.0, &_tariff.1));
+                    let resp = result
+                        .as_ref()
+                        .unwrap()
+                        .inc_counter(&collection)?
+                        .tariffing(&_tariff.0, &_tariff.1);
+
+                    return Ok(resp);
                 }
             }
         }

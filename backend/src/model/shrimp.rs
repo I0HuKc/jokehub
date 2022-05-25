@@ -240,7 +240,7 @@ impl Category {
     /// Если значение TRUE тогда в случае пустого массива предпочитаемые категории он будет
     /// перезаписан общим списком доступных категорий.
     ///
-    /// Если значение FALSE, в случае пустого массива он не перезаписывается.
+    /// Если значение FALSE, пустой массив не перезаписывается.
     pub fn random(mut list: Option<Vec<Category>>, rf: bool) -> (Option<Category>, Vec<Category>) {
         use super::shrimp::Category::{Anecdote, Joke, Punch};
 
