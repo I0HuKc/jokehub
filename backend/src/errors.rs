@@ -277,6 +277,12 @@ impl From<bson::ser::Error> for HubError {
     }
 }
 
+impl From<bson::de::Error> for HubError {
+    fn from(err: bson::de::Error) -> Self {
+        err_internal!("Faild to decode document", err.to_string())
+    }
+}
+
 pub mod message {
     use lazy_static::lazy_static;
 
