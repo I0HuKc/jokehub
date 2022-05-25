@@ -50,7 +50,7 @@ pub async fn get_anecdote<'f>(
         uuid_validation(id)?,
     )?;
 
-    Ok(result.tariffing(_tariff.0, _tariff.1))
+    Ok(result.tariffing(&_tariff.0, &_tariff.1))
 }
 
 #[delete("/anecdote/<id>")]

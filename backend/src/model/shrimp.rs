@@ -1,29 +1,27 @@
 use lingua::Language;
 use mongodb::bson::DateTime as MongoDateTime;
 use rand::prelude::SliceRandom;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fmt;
 use uuid::Uuid;
 
 use super::account::Tariff;
+use crate::db::mongo::varys::Varys;
 use crate::errors::HubError;
 
 /// Заголовок любой записи контента
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Head {
     pub counter: usize,
-    pub rfd: u32,
-    pub timestamp: MongoDateTime,
+    pub timestamp: i64,
 }
 
 impl Head {
     pub fn new() -> Self {
         Head {
             counter: 0,
-            rfd: rand::thread_rng().gen::<u32>(),
-            timestamp: MongoDateTime::now(),
+            timestamp: MongoDateTime::now().timestamp_millis(),
         }
     }
 }
@@ -171,7 +169,7 @@ where
     }
 
     /// Сериализация контента согласно пользовательскому тарифу
-    pub fn tariffing(&self, tariff: Tariff, err: Option<HubError>) -> Value {
+    pub fn tariffing(&self, tariff: &Tariff, err: &Option<HubError>) -> Value {
         match tariff {
             Tariff::Free => {
                 let base = json!(self.body);
@@ -210,9 +208,9 @@ where
     }
 
     /// Слияние базового json объекта и объекта ошибок (если они возникли)
-    fn err_union(mut base: Value, err: Option<HubError>) -> Value {
+    fn err_union(mut base: Value, err: &Option<HubError>) -> Value {
         if err.is_some() {
-            Self::merge(&mut base, json!({ "errors": err.unwrap() }));
+            Self::merge(&mut base, json!({ "errors": err.as_ref().unwrap() }));
 
             base
         } else {
@@ -237,102 +235,61 @@ impl Category {
     /// Выбор случайной категории.
     /// Если есть предпочитаемые категории, выбирается случайная из предоставленных.
     /// Если список предпочтений пуст, выбирается из общего списка категоий.
-    pub fn random(mut list: Option<Vec<Category>>) -> Category {
+    ///
+    /// rf — (rewrite flag)
+    /// Если значение TRUE тогда в случае пустого массива предпочитаемые категории он будет
+    /// перезаписан общим списком доступных категорий.
+    ///
+    /// Если значение FALSE, в случае пустого массива он не перезаписывается.
+    pub fn random(mut list: Option<Vec<Category>>, rf: bool) -> (Option<Category>, Vec<Category>) {
         use super::shrimp::Category::{Anecdote, Joke, Punch};
 
-        list.get_or_insert(vec![Anecdote, Joke, Punch])
-            .choose(&mut rand::thread_rng())
-            .unwrap()
-            .to_owned()
+        if rf {
+            let list = list.get_or_insert(vec![Anecdote, Joke, Punch]);
+            let random_category = list.choose(&mut rand::thread_rng()).unwrap().to_owned();
+
+            // Удаляю выбранную категорию из доступных
+            let index = list.iter().position(|x| *x == random_category).unwrap();
+            list.remove(index);
+
+            (Some(random_category), list.to_vec())
+        } else {
+            if list.as_ref().unwrap().len() != 0 {
+                let random_category = list
+                    .as_ref()
+                    .unwrap()
+                    .choose(&mut rand::thread_rng())
+                    .unwrap()
+                    .to_owned();
+
+                // Удаляю выбранную категорию из доступных
+                let index = list
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .position(|x| *x == random_category)
+                    .unwrap();
+
+                list.as_mut().unwrap().remove(index);
+
+                (Some(random_category), list.unwrap().to_vec())
+            } else {
+                (None, Vec::new())
+            }
+        }
+    }
+
+    pub fn to_collection(&self) -> Varys {
+        match self {
+            Category::Anecdote => Varys::Anecdote,
+            Category::Joke => Varys::Joke,
+            Category::Punch => Varys::Punch,
+        }
     }
 }
 
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
-    }
-}
-
-pub mod filter {
-    //! Модуль фильтрации контента
-    use bson::Document;
-    use mongodb::bson::doc;
-    use rand::Rng;
-
-    macro_rules! macro_filter {
-        ($co:literal, $ri:expr, $( ($k:literal, $v:expr)), *) => {
-            {
-                let mut filter = doc! {"_header.rfd": {$co: $ri}};
-                $(
-                    if $v.is_some() {
-                        filter.insert($k, $v);
-                    }
-                )*
-
-                filter
-            }
-        };
-    }
-
-    pub struct Filter<'a> {
-        // Случайное число от которого будет осуществляться поиск
-        ri: u32,
-        author: Option<&'a str>,
-        language: Option<&'a str>,
-        flags: Option<Vec<super::Flag>>,
-    }
-
-    impl<'a> Filter<'a> {
-        pub fn new(
-            author: Option<&'a str>,
-            language: Option<&'a str>,
-            flags: Option<Vec<super::Flag>>,
-        ) -> Self {
-            Filter {
-                ri: rand::thread_rng().gen::<u32>(),
-                author,
-                language,
-                flags,
-            }
-        }
-
-        /// Генерация набора фильтров
-        /// Первый документ сгенерирован для $gt поиска
-        /// Второй для $lte поиска
-        pub fn gen(&self) -> (Document, Document) {
-            let mut gt = macro_filter!(
-                "$gt",
-                self.ri,
-                ("_meta-data.language", self.language),
-                ("_meta-data.author", self.author)
-            );
-            gt = self.add_flags(Box::new(gt));
-
-            let mut lte = macro_filter!(
-                "$lte",
-                self.ri,
-                ("_meta-data.language", self.language),
-                ("_meta-data.author", self.author)
-            );
-            lte = self.add_flags(Box::new(lte));
-
-            (gt, lte)
-        }
-
-        /// Метод добавления флагов (если они указаны явно) в общий объект фильтрации
-        fn add_flags(&'a self, mut d: Box<Document>) -> Document {
-            if self.flags.is_some() {
-                for f in self.flags.as_ref().unwrap() {
-                    d.insert(
-                        format!("_meta-data.flags.{}", f.to_string().to_lowercase()),
-                        true,
-                    );
-                }
-
-                *d
-            } else {
-                *d
-            }
-        }
     }
 }
