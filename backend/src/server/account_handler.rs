@@ -7,13 +7,13 @@ use validator::Validate;
 use crate::{
     db::mongo::MongoConn,
     db::mongo::{varys::Varys, Crud},
-    err_not_found, err_unauthorized,
+    err_internal, err_not_found, err_unauthorized,
     errors::HubError,
     model::{
         account::{
             security::{AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens},
             validation::level_validation,
-            Account, *,
+            *,
         },
         validation::query_validation,
     },
@@ -100,6 +100,43 @@ pub fn refresh_token<'f>(
     .set(client.0.as_ref())?;
 
     Ok(Json(new_tokens))
+}
+
+#[post("/account/password/change", data = "<jcp>")]
+pub fn change_password<'f>(
+    _auth: AuthGuard,
+    client: MongoConn<'f>,
+    jcp: Json<ChangePassword>,
+) -> Result<(), HubError> {
+    // Проверяю что пароли отличаются
+    if jcp.0.old_password == jcp.0.new_password {
+        return Err(HubError::new_unprocessable(
+            "The new password must be different from the old one",
+            None,
+        ));
+    }
+
+    // Достаю пользователя из БД
+    let user = User::get_by_username(client.0.as_ref(), _auth.0.get_username())?;
+
+    // Проверяю хеши паролей
+    if user.password_verify(format!("{}", jcp.0.old_password).as_bytes())? {
+        // Создаю хеш нового пароля
+        let hash = User::password_hashing_apart(&jcp.0.new_password)?;
+
+        // обновляю запись в БД
+        return User::update_password(client.0.as_ref(), _auth.0.get_username(), hash).and_then(
+            |update_result| {
+                if update_result.modified_count < 1 {
+                    Err(err_internal!("Faild to update password"))
+                } else {
+                    Ok(())
+                }
+            },
+        );
+    }
+
+    Err(err_not_found!("user"))
 }
 
 #[post("/account/logout", data = "<jrt>")]

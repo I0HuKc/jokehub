@@ -31,6 +31,21 @@ impl<'a> User {
         Ok(res)
     }
 
+    pub fn update_password(
+        client: &Client,
+        username: String,
+        new_password_hash: String,
+    ) -> Result<UpdateResult, HubError> {
+        let collection: Collection<User> = Varys::get(client, Varys::Users);
+
+        let filter = doc! {"username": username};
+        let update = doc! {"$set": {"hash": new_password_hash, "updated_at": MongoDateTime::now()}};
+
+        let res = collection.update_one(filter, update, None)?;
+
+        Ok(res)
+    }
+
     pub fn privilege_set(
         collection: Collection<User>,
         username: &str,
