@@ -132,10 +132,13 @@ impl<'a> User {
 }
 
 pub mod security {
+    use std::borrow::Cow;
+
     use chrono::prelude::*;
     use jsonwebtoken::TokenData;
     use jsonwebtoken::{errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Validation};
     use rocket::http::Status;
+    use rocket::Route;
     use rocket::{
         request, request::FromRequest, request::Outcome, serde::DeserializeOwned, Request,
     };
@@ -336,40 +339,89 @@ pub mod security {
 
     /// Охранник требующий уровени доступа не ниже чем Master
     /// Включает в себя прохожение через общий охранник авторизации
-    pub struct MasterGuard(pub AccessClaims);
+    // pub struct MasterGuard(pub AccessClaims);
 
-    #[rocket::async_trait]
-    impl<'r> FromRequest<'r> for MasterGuard {
-        type Error = HubError;
+    // #[rocket::async_trait]
+    // impl<'r> FromRequest<'r> for MasterGuard {
+    //     type Error = HubError;
 
-        async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-            request
-                .guard::<AuthGuard>()
-                .await
-                .and_then(|d| match d.0.level {
-                    Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
-                    Level::Master => Outcome::Success(MasterGuard(d.0)),
-                    Level::Sith => Outcome::Success(MasterGuard(d.0)),
-                })
-        }
-    }
+    //     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    //         request
+    //             .guard::<AuthGuard>()
+    //             .await
+    //             .and_then(|d| match d.0.level {
+    //                 Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
+    //                 Level::Master => Outcome::Success(MasterGuard(d.0)),
+    //                 Level::Sith => Outcome::Success(MasterGuard(d.0)),
+    //             })
+    //     }
+    // }
 
     /// Охранник требующий уровени доступа не ниже чем Master
     /// Включает в себя прохожение через общий охранник авторизации
-    pub struct SithGuard(pub AccessClaims);
+    // pub struct SithGuard(pub AccessClaims);
+
+    // #[rocket::async_trait]
+    // impl<'r> FromRequest<'r> for SithGuard {
+    //     type Error = HubError;
+
+    //     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    //         request
+    //             .guard::<AuthGuard>()
+    //             .await
+    //             .and_then(|d| match d.0.level {
+    //                 Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
+    //                 Level::Master => Outcome::Failure((Status::Forbidden, err_forbidden!())),
+    //                 Level::Sith => Outcome::Success(SithGuard(d.0)),
+    //             })
+    //     }
+    // }
+
+    pub struct LevelGuard(pub AccessClaims);
+
+    impl LevelGuard {
+        /// Проверка маршрута на соответствие запрашиваемого пользователя и его уровня доступа
+        fn access_check(route: Option<&Route>, user_level: &Level) -> bool {
+            let route = route.unwrap().name.clone().unwrap();
+
+            let master_level: Vec<Cow<str>> = vec![
+                Cow::Borrowed("delete_joke"),
+                Cow::Borrowed("delete_punch"),
+                Cow::Borrowed("delete_anecdote"),
+            ];
+            let sith_level: Vec<Cow<str>> =
+                [vec![Cow::Borrowed("privilege")], master_level.clone()].concat();
+
+            match user_level {
+                Level::Padawan => false,
+                Level::Master => master_level.contains(&route),
+                Level::Sith => sith_level.contains(&route),
+            }
+        }
+    }
 
     #[rocket::async_trait]
-    impl<'r> FromRequest<'r> for SithGuard {
+    impl<'r> FromRequest<'r> for LevelGuard {
         type Error = HubError;
 
         async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
             request
                 .guard::<AuthGuard>()
                 .await
-                .and_then(|d| match d.0.level {
-                    Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
-                    Level::Master => Outcome::Failure((Status::Forbidden, err_forbidden!())),
-                    Level::Sith => Outcome::Success(SithGuard(d.0)),
+                .and_then(|d| match d.0.get_level() {
+                    level @ Level::Padawan if Self::access_check(request.route(), &level) => {
+                        Outcome::Success(LevelGuard(d.0))
+                    }
+
+                    level @ Level::Master if Self::access_check(request.route(), &level) => {
+                        Outcome::Success(LevelGuard(d.0))
+                    }
+
+                    level @ Level::Sith if Self::access_check(request.route(), &level) => {
+                        Outcome::Success(LevelGuard(d.0))
+                    }
+
+                    _ => Outcome::Failure((Status::Forbidden, err_forbidden!())),
                 })
         }
     }

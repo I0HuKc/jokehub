@@ -11,7 +11,7 @@ use crate::{
     errors::HubError,
     model::{
         account::{
-            security::{AuthGuard, RefreshClaims, RefreshResp, Session, SithGuard, Tokens},
+            security::{AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens},
             validation::level_validation,
             *,
         },
@@ -142,11 +142,18 @@ pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(),
 
 #[put("/privilege/<username>/<level>")]
 pub async fn privilege<'f>(
-    _level: SithGuard,
+    _level: LevelGuard,
     client: MongoConn<'f>,
     username: &str,
     level: &str,
 ) -> Result<(), HubError> {
+    if query_validation(username)? == _level.0.get_username() {
+        return Err(HubError::new_unprocessable(
+            "You can't change your role",
+            None,
+        ));
+    }
+
     User::privilege_set(
         Varys::get(client.0.as_ref(), Varys::Users),
         query_validation(username)?,

@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use validator::Validate;
 
 use crate::model::{
-    account::security::{AuthGuard, MasterGuard, TariffGuard},
+    account::security::{AuthGuard, LevelGuard, TariffGuard},
     punch::*,
     shrimp::{Flags, Shrimp, Tail},
     validation::uuid_validation,
@@ -59,7 +59,7 @@ pub async fn get_punch<'f>(
 
 #[delete("/punch/<id>")]
 pub async fn delete_punch<'f>(
-    _level: MasterGuard,
+    _level: LevelGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<(), HubError> {

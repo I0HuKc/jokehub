@@ -9,7 +9,7 @@ use rocket::{
     Build, Request, Rocket, State,
 };
 
-use crate::errors::HubError;
+use crate::{err_internal, errors::HubError};
 
 pub struct Lingua<'a>(pub &'a State<Box<LanguageDetector>>);
 
@@ -52,13 +52,15 @@ impl LinguaManage for Rocket<Build> {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Lingua<'r> {
-    type Error = ();
+    type Error = HubError;
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Lingua<'r>, Self::Error> {
         let outcome = request.guard::<&State<Box<LanguageDetector>>>().await;
         match outcome {
             Outcome::Success(client) => Outcome::Success(Lingua(client)),
-            Outcome::Failure(_) => todo!(),
+            Outcome::Failure(status) => {
+                Outcome::Failure((status.0, err_internal!("Faild to get Lingua state")))
+            }
             Outcome::Forward(_) => todo!(),
         }
     }

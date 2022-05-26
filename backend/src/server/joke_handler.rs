@@ -8,7 +8,7 @@ use crate::{
     err_not_found,
     errors::HubError,
     model::{
-        account::security::{AuthGuard, MasterGuard, TariffGuard},
+        account::security::{AuthGuard, LevelGuard, TariffGuard},
         joke::*,
         shrimp::{Flags, Shrimp, Tail},
         validation::uuid_validation,
@@ -56,7 +56,7 @@ pub async fn get_joke<'f>(
 
 #[delete("/joke/<id>")]
 pub async fn delete_joke<'f>(
-    _level: MasterGuard,
+    _level: LevelGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<(), HubError> {

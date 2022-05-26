@@ -7,7 +7,7 @@ use crate::{
     err_not_found,
     errors::HubError,
     model::{
-        account::security::{AuthGuard, MasterGuard, TariffGuard},
+        account::security::{AuthGuard, LevelGuard, TariffGuard},
         anecdote::*,
         shrimp::{Flags, Shrimp, Tail},
         validation::uuid_validation,
@@ -55,7 +55,7 @@ pub async fn get_anecdote<'f>(
 
 #[delete("/anecdote/<id>")]
 pub async fn delete_anecdote<'f>(
-    _level: MasterGuard,
+    _level: LevelGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<(), HubError> {
