@@ -93,6 +93,87 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             }
         }
     );
+    db.joke.insertOne(
+        {
+            "_id": "11b923b0-4241-4c32-ac06-f560468fac20",
+            "_header": { "counter": NumberLong(0), "timestamp": NumberLong(new Date().getTime()) },
+            "category": "joke",
+            "text": "test_joke_record_for_random__1",
+            "_meta-data": {
+                "flags": {
+                    "nsfw": true,
+                    "religious": false,
+                    "political": false,
+                    "racist": false,
+                    "sexist": false
+                },
+                "author": "shavedkiwi",
+                "tags": ["general"],
+                "language": "russian"
+            }
+        }
+    );
+    db.joke.insertOne(
+        {
+            "_id": "11b923b0-4241-4c32-ac06-f560468fac21",
+            "_header": { "counter": NumberLong(0), "timestamp": NumberLong(new Date().getTime()) },
+            "category": "joke",
+            "text": "test_joke_record_for_random__2",
+            "_meta-data": {
+                "flags": {
+                    "nsfw": true,
+                    "religious": false,
+                    "political": false,
+                    "racist": false,
+                    "sexist": false
+                },
+                "author": "shavedkiwi",
+                "tags": ["general"],
+                "language": "russian"
+            }
+        }
+    );
+    db.joke.insertOne(
+        {
+            "_id": "11b923b0-4241-4c32-ac06-f560468fac22",
+            "_header": { "counter": NumberLong(0), "timestamp": NumberLong(new Date().getTime()) },
+            "category": "joke",
+            "text": "test_joke_record_for_random__3",
+            "_meta-data": {
+                "flags": {
+                    "nsfw": false,
+                    "religious": true,
+                    "political": false,
+                    "racist": true,
+                    "sexist": false
+                },
+                "author": "shavedkiwi",
+                "tags": ["for_test"],
+                "language": "russian"
+            }
+        }
+    );
+    db.joke.insertOne(
+        {
+            "_id": "11b923b0-4241-4c32-ac06-f560468fac23",
+            "_header": { "counter": NumberLong(0), "timestamp": NumberLong(new Date().getTime()) },
+            "category": "joke",
+            "text": "test_joke_record_for_random__4",
+            "_meta-data": {
+                "flags": {
+                    "nsfw": false,
+                    "religious": false,
+                    "political": false,
+                    "racist": true,
+                    "sexist": false
+                },
+                "author": "shavedkiwi",
+                "tags": ["for_test"],
+                "language": "english"
+            }
+        }
+    );
+    
 
     db.createCollection("punch");
     db.punch.createIndex(
