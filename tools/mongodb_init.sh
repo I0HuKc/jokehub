@@ -36,6 +36,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "username": "shavedkiwi",
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$polzlXI0YXGFxBp2aFq8orG8XG/VhwlBTlyLP+ZSrCE\$$MONGO_JOKERHUB_SITH_HASH",
             "level": "sith",
+            "theme": "light",
             "tariff": "enterprice",
             "created_at": new Date(),
             "updated_at": new Date(),
@@ -99,6 +100,16 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
         }, 
         {
             "expireAfterSeconds" : 60 * 60 * 24 * 7
+        }
+    )
+
+    db.createCollection("notifications");
+    db.notifications.createIndex(
+        {
+            "_meta-data.created_at" : 1
+        }, 
+        {
+            "expireAfterSeconds" : 60
         }
     )
 EOF

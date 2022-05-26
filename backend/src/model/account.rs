@@ -51,6 +51,21 @@ impl Default for Tariff {
     }
 }
 
+#[derive(Clone, Serialize, PartialEq, Deserialize)]
+pub enum Theme {
+    #[serde(rename = "light")]
+    Light,
+
+    #[serde(rename = "dark")]
+    Dark,
+}
+
+impl Default for Theme {
+    fn default() -> Self {
+        Theme::Light
+    }
+}
+
 /// Тело запроса при регистрации пользователя
 #[derive(Clone, Validate, Deserialize)]
 pub struct NewUser {
@@ -67,6 +82,12 @@ pub struct NewUser {
     pub password: String,
 }
 
+#[derive(Clone, Validate, Deserialize)]
+pub struct ChangePassword {
+    pub old_password: String,
+    pub new_password: String,
+}
+
 /// Нативная структура пользовательских данных
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
@@ -78,6 +99,8 @@ pub struct User {
 
     pub level: Level,
     pub tariff: Tariff,
+
+    pub theme: Theme,
 
     pub created_at: MongoDateTime,
     pub updated_at: MongoDateTime,
@@ -91,6 +114,7 @@ impl From<NewUser> for User {
             level: Level::Padawan,
             tariff: Tariff::Free,
             hash: nu.password,
+            theme: Theme::default(),
             created_at: MongoDateTime::now(),
             updated_at: MongoDateTime::now(),
         }
@@ -108,15 +132,20 @@ impl<'a> User {
 
     // Создание хеша пароля
     pub fn password_hashing(&mut self) -> Result<User, HubError> {
+        self.hash = Self::password_hashing_apart(&self.hash)?;
+        Ok(self.clone())
+    }
+
+    pub fn password_hashing_apart(password: &String) -> Result<String, HubError> {
         let salt: [u8; 32] = rand::thread_rng().gen();
         let config = Config::default();
 
-        self.hash = argon2::hash_encoded(self.hash.as_bytes(), &salt, &config).map_err(|err| {
+        let hash = argon2::hash_encoded(password.as_bytes(), &salt, &config).map_err(|err| {
             HubError::new_internal("Failed create password hash", Some(Vec::new()))
                 .add(format!("{}", err))
         })?;
 
-        Ok(self.clone())
+        Ok(hash)
     }
 }
 
@@ -124,6 +153,7 @@ impl<'a> User {
 pub struct Account {
     username: String,
     tariff: Tariff,
+    theme: Theme,
     sessions: Vec<SessionInfo>,
     created_at: String,
     updated_at: String,
@@ -156,6 +186,7 @@ impl Account {
         Account {
             username: user.username,
             tariff: user.tariff,
+            theme: user.theme,
             sessions: SessionInfo::vec_convert(sessions),
             created_at: user.created_at.to_rfc3339_string(),
             updated_at: user.updated_at.to_rfc3339_string(),
@@ -168,6 +199,106 @@ impl Account {
 
     pub fn get_tariff(&self) -> &Tariff {
         &self.tariff
+    }
+}
+
+pub mod notification {
+    use bson::oid::ObjectId;
+    use mongodb::bson::DateTime as MongoDateTime;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize)]
+    pub enum NotifyKind {
+        #[serde(rename = "success")]
+        Success,
+
+        #[serde(rename = "attention")]
+        Attention,
+
+        #[serde(rename = "error")]
+        Error,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub enum ActionKind {
+        #[serde(rename = "major")]
+        Major,
+
+        #[serde(rename = "minor")]
+        Minor,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Action {
+        pub kind: ActionKind,
+        pub text: String,
+        pub href: String,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Notification {
+        #[serde(rename = "_id")]
+        pub id: ObjectId,
+        pub from: String,
+        pub to: String,
+        pub kind: NotifyKind,
+
+        #[serde(flatten)]
+        pub body: Body,
+
+        #[serde(rename = "_meta-data")]
+        pub meta_data: MetaData,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Body {
+        pub title: String,
+        pub description: Option<String>,
+        pub actions: Option<Vec<Action>>,
+    }
+
+    impl Body {
+        pub fn new(
+            title: String,
+            description: Option<String>,
+            actions: Option<Vec<Action>>,
+        ) -> Self {
+            Self {
+                title,
+                description,
+                actions,
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct MetaData {
+        pub read: bool,
+        pub archived: bool,
+        pub created_at: MongoDateTime,
+    }
+
+    impl Default for MetaData {
+        fn default() -> Self {
+            Self {
+                read: false,
+                archived: false,
+                created_at: MongoDateTime::now(),
+            }
+        }
+    }
+
+    impl Notification {
+        pub fn new(from: String, to: String, kind: NotifyKind, body: Body) -> Self {
+            Self {
+                id: bson::oid::ObjectId::new(),
+                from,
+                to,
+                kind,
+                body,
+                meta_data: MetaData::default(),
+            }
+        }
     }
 }
 
@@ -215,6 +346,14 @@ pub mod security {
         pub fn get_stamp(&self) -> String {
             self.stamp.to_rfc3339_string()
         }
+    }
+
+    #[derive(Serialize, Deserialize, Clone)]
+    struct Fingerprint {
+        ip: String,
+        location: String,
+        browser: String,
+        os: String,
     }
 
     const SECRET: &str = "secret297152aebda7";
