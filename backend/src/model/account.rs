@@ -2,13 +2,12 @@ use argon2::Config;
 use mongodb::bson::DateTime as MongoDateTime;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 use std::fmt;
 use strum_macros::EnumIter;
 use uuid::Uuid;
 use validator::Validate;
 
-use super::validation::validate_query;
+use super::{account::security::Session, validation::validate_query};
 use crate::errors::HubError;
 
 /// Уровни доступа доступные в системе
@@ -119,15 +118,56 @@ impl<'a> User {
 
         Ok(self.clone())
     }
+}
 
-    /// Убрать деликатную пользовательскую информацию
-    pub fn secure(&self) -> Value {
-        json!({
-            "username": self.username,
-            "tariff": self.tariff,
-            "created_at": self.created_at.to_rfc3339_string(),
-            "updated_at": self.updated_at.to_rfc3339_string(),
-        })
+#[derive(Serialize, Deserialize)]
+pub struct Account {
+    username: String,
+    tariff: Tariff,
+    sessions: Vec<SessionInfo>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SessionInfo {
+    stamp: String,
+}
+
+impl From<Session> for SessionInfo {
+    fn from(s: Session) -> Self {
+        SessionInfo {
+            stamp: s.get_stamp(),
+        }
+    }
+}
+
+impl SessionInfo {
+    fn vec_convert(ov: Vec<Session>) -> Vec<Self> {
+        let mut nv: Vec<Self> = Vec::new();
+        let _: Vec<_> = ov.into_iter().map(|value| nv.push(value.into())).collect();
+
+        return nv;
+    }
+}
+
+impl Account {
+    pub fn new(user: User, sessions: Vec<Session>) -> Self {
+        Account {
+            username: user.username,
+            tariff: user.tariff,
+            sessions: SessionInfo::vec_convert(sessions),
+            created_at: user.created_at.to_rfc3339_string(),
+            updated_at: user.updated_at.to_rfc3339_string(),
+        }
+    }
+
+    pub fn get_username(&self) -> &str {
+        self.username.as_str()
+    }
+
+    pub fn get_tariff(&self) -> &Tariff {
+        &self.tariff
     }
 }
 
@@ -170,6 +210,10 @@ pub mod security {
 
         pub fn get_username(&self) -> String {
             self.username.clone()
+        }
+
+        pub fn get_stamp(&self) -> String {
+            self.stamp.to_rfc3339_string()
         }
     }
 
@@ -337,46 +381,7 @@ pub mod security {
         }
     }
 
-    /// Охранник требующий уровени доступа не ниже чем Master
-    /// Включает в себя прохожение через общий охранник авторизации
-    // pub struct MasterGuard(pub AccessClaims);
-
-    // #[rocket::async_trait]
-    // impl<'r> FromRequest<'r> for MasterGuard {
-    //     type Error = HubError;
-
-    //     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-    //         request
-    //             .guard::<AuthGuard>()
-    //             .await
-    //             .and_then(|d| match d.0.level {
-    //                 Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
-    //                 Level::Master => Outcome::Success(MasterGuard(d.0)),
-    //                 Level::Sith => Outcome::Success(MasterGuard(d.0)),
-    //             })
-    //     }
-    // }
-
-    /// Охранник требующий уровени доступа не ниже чем Master
-    /// Включает в себя прохожение через общий охранник авторизации
-    // pub struct SithGuard(pub AccessClaims);
-
-    // #[rocket::async_trait]
-    // impl<'r> FromRequest<'r> for SithGuard {
-    //     type Error = HubError;
-
-    //     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-    //         request
-    //             .guard::<AuthGuard>()
-    //             .await
-    //             .and_then(|d| match d.0.level {
-    //                 Level::Padawan => Outcome::Failure((Status::Forbidden, err_forbidden!())),
-    //                 Level::Master => Outcome::Failure((Status::Forbidden, err_forbidden!())),
-    //                 Level::Sith => Outcome::Success(SithGuard(d.0)),
-    //             })
-    //     }
-    // }
-
+    /// Охранник ресурсов требующих доступ не ниже чем Master
     pub struct LevelGuard(pub AccessClaims);
 
     impl LevelGuard {
@@ -384,13 +389,15 @@ pub mod security {
         fn access_check(route: Option<&Route>, user_level: &Level) -> bool {
             let route = route.unwrap().name.clone().unwrap();
 
+            // Маршруты которые защищены уровнем Master
             let master_level: Vec<Cow<str>> = vec![
                 Cow::Borrowed("delete_joke"),
                 Cow::Borrowed("delete_punch"),
                 Cow::Borrowed("delete_anecdote"),
             ];
+            // Маршруты которые защищены уровнем Sith
             let sith_level: Vec<Cow<str>> =
-                [vec![Cow::Borrowed("privilege")], master_level.clone()].concat();
+                [vec![Cow::Borrowed("privilege")], master_level.clone()].concat(); // маршруты доступные Master доступны и Sith
 
             match user_level {
                 Level::Padawan => false,

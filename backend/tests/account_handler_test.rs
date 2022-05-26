@@ -2,12 +2,12 @@ mod common;
 
 use rocket::http::{ContentType, Header, Status};
 use rocket::local::blocking::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use common::accounts::TestPadawan;
 use jokehub::model::account::{
     security::{AccessClaims, RefreshClaims, Tokens},
-    Tariff,
+    Account, Tariff,
 };
 
 use common::accounts as account;
@@ -70,18 +70,10 @@ fn account_padawan() {
 
             assert_eq!(resp.status(), Status::Ok);
 
-            #[derive(Serialize, Deserialize)]
-            pub struct UserResp {
-                pub username: String,
-                pub tariff: Tariff,
-                pub created_at: String,
-                pub updated_at: String,
-            }
+            let body = assert_body!(resp, Account);
 
-            let body = assert_body!(resp, UserResp);
-
-            assert_eq!("upadawan", body.username);
-            assert_eq!(Tariff::Free, body.tariff);
+            assert_eq!("upadawan", body.get_username());
+            assert_eq!(Tariff::Free, *body.get_tariff());
         }
 
         Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
@@ -186,6 +178,43 @@ fn delete_account() {
         }
 
         Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    }
+}
+
+mod tariff_guard {
+    use crate::{assert_body, bearer, common, common::joke::TestNewJoke, TestPadawan};
+    use rocket::http::{Header, Status};
+    use serde::Deserialize;
+
+    #[test]
+    fn get_record_by_tariff_free() {
+        let path: &str = "/v1/joke";
+        let client = common::test_client().lock().unwrap();
+        let padawan = TestPadawan::default();
+
+        match TestNewJoke::create_test_record(&client, Box::new(padawan)) {
+            Ok((tokens, status, id)) => {
+                assert_eq!(status, Status::Ok);
+
+                let resp = client
+                    .get(format!("{}/{}", path, id))
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Ok);
+
+                #[allow(dead_code)]
+                #[derive(Deserialize, Debug)]
+                struct Response {
+                    category: String,
+                    text: String,
+                }
+
+                assert_body!(resp, Response);
+            }
+
+            Err(err) => assert!(false, "\n\nFaild to create test record: {}\n\n", err),
+        }
     }
 }
 

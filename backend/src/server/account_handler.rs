@@ -13,7 +13,7 @@ use crate::{
         account::{
             security::{AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens},
             validation::level_validation,
-            *,
+            Account, *,
         },
         validation::query_validation,
     },
@@ -42,8 +42,7 @@ pub async fn login<'f>(
 ) -> Result<Json<Tokens>, HubError> {
     jnu.0.validate()?;
 
-    let result =
-        User::get_by_username(Varys::get(client.0.as_ref(), Varys::Users), jnu.0.username)?;
+    let result = User::get_by_username(client.0.as_ref(), jnu.0.username)?;
 
     if result.password_verify(format!("{}", jnu.0.password).as_bytes())? {
         let tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;
@@ -59,13 +58,14 @@ pub async fn login<'f>(
 }
 
 #[get("/account")]
-pub async fn account<'f>(client: MongoConn<'f>, _auth: AuthGuard) -> Result<Value, HubError> {
-    let result = User::get_by_username(
-        Varys::get(client.0.as_ref(), Varys::Users),
-        _auth.0.get_username(),
-    )?;
+pub async fn account<'f>(
+    client: MongoConn<'f>,
+    _auth: AuthGuard,
+) -> Result<Json<Account>, HubError> {
+    let user = User::get_by_username(client.0.as_ref(), _auth.0.get_username())?;
+    let sessions = Session::roll(user.username.as_str(), client.0.as_ref())?;
 
-    Ok(result.secure())
+    Ok(Json(Account::new(user, sessions)))
 }
 
 #[post("/account/token/refresh", data = "<jrt>")]
@@ -87,10 +87,7 @@ pub fn refresh_token<'f>(
     })?;
 
     // Достаю пользователя из БД
-    let result = User::get_by_username(
-        Varys::get(client.0.as_ref(), Varys::Users),
-        refresh_claims.get_username(),
-    )?;
+    let result = User::get_by_username(client.0.as_ref(), refresh_claims.get_username())?;
 
     // Создаю новую пару токенов
     let new_tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;
@@ -144,7 +141,7 @@ pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(),
 pub async fn privilege<'f>(
     _level: LevelGuard,
     client: MongoConn<'f>,
-    username: &str,
+    username: &'f str,
     level: &str,
 ) -> Result<(), HubError> {
     if query_validation(username)? == _level.0.get_username() {

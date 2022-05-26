@@ -14,10 +14,8 @@ use crate::{
 impl<'a> Crud<'a, User> for User {}
 
 impl<'a> User {
-    pub fn get_by_username(
-        collection: Collection<User>,
-        username: String,
-    ) -> Result<User, HubError> {
+    pub fn get_by_username(client: &Client, username: String) -> Result<User, HubError> {
+        let collection: Collection<User> = Varys::get(client, Varys::Users);
         match collection.find_one(doc! { "username":  username}, None)? {
             Some(value) => Ok(value),
             None => Err(err_not_found!("user")),
@@ -56,12 +54,25 @@ impl Session {
         Ok(rersult)
     }
 
-    pub fn check<'f>(token: &str, client: &Client) -> Result<Session, HubError> {
+    pub fn check<'f>(token: &'f str, client: &'f Client) -> Result<Session, HubError> {
         let collection: Collection<Session> = Varys::get(client, Varys::Sessions);
         match collection.find_one(doc! { "token":  token}, None)? {
             Some(value) => Ok(value),
             None => Err(err_unauthorized!("Session is not found")),
         }
+    }
+
+    pub fn roll<'f>(username: &'f str, client: &'f Client) -> Result<Vec<Session>, HubError> {
+        let collection: Collection<Session> = Varys::get(client, Varys::Sessions);
+
+        let mut cursor = collection.find(doc! {"username": username}, None)?;
+        let mut result: Vec<Session> = Vec::new();
+
+        while let Some(doc) = cursor.next() {
+            result.push(doc?);
+        }
+
+        Ok(result)
     }
 
     pub fn drop<'f>(token: &str, client: &Client) -> Result<DeleteResult, HubError> {
