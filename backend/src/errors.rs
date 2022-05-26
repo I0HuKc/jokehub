@@ -257,23 +257,14 @@ impl From<MongoDbError> for HubError {
                 _ => HubError::new(ErrorKind::Internal(format!("{:?}", err).as_str(), None)),
             },
 
-            _ => HubError::new(ErrorKind::Internal(
-                format!("{:?}", err.kind).as_str(),
-                None,
-            )),
+            _ => err_internal!("Database error", err),
         }
     }
 }
 
 impl From<bson::ser::Error> for HubError {
     fn from(err: bson::ser::Error) -> Self {
-        match err {
-            bson::ser::Error::SerializationError { message, .. } => {
-                HubError::new(ErrorKind::Internal(message.as_str(), None))
-            }
-
-            _ => HubError::new(ErrorKind::Internal(format!("{:?}", err).as_str(), None)),
-        }
+        err_internal!("Faild to encode document", err.to_string())
     }
 }
 

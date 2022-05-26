@@ -102,7 +102,7 @@ impl<'a> User {
     // Верификация пароля
     pub fn password_verify(&self, password: &[u8]) -> Result<bool, HubError> {
         argon2::verify_encoded(&self.hash, password).map_err(|err| {
-            HubError::new_internal("Failed verify password", Some(Vec::new()))
+            HubError::new_internal("Failed to verify password", Some(Vec::new()))
                 .add(format!("{}", err))
         })
     }
@@ -280,26 +280,19 @@ pub mod security {
 
         async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
             match request.headers().get_one("Authorization") {
-                Some(at) => {
-                    let split = at.split(" ");
-                    let vec = split.collect::<Vec<&str>>();
+                Some(at) if split_token(at).len() == 2 => {
+                    let token = Tokens::decode_token::<AccessClaims>(split_token(at)[1]);
 
-                    if vec.len() != 2 {
-                        let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(
-                            "Token is in invalid format",
-                        ));
-                        let error = HubError::new(kind);
-
-                        Outcome::Failure((error.get_status(), error))
-                    } else {
-                        let token = Tokens::decode_token::<AccessClaims>(vec[1]);
-
-                        match token {
-                            Ok(t) => Outcome::Success(AuthGuard(t.claims)),
-                            Err(err) => Outcome::Failure((err.get_status(), err)),
-                        }
+                    match token {
+                        Ok(t) => Outcome::Success(AuthGuard(t.claims)),
+                        Err(err) => Outcome::Failure((err.get_status(), err)),
                     }
                 }
+
+                Some(_) => Outcome::Failure((
+                    Status::Unauthorized,
+                    err_unauthorized!("Token is in invalid format"),
+                )),
 
                 None => {
                     let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::TokenMissing);
@@ -322,24 +315,19 @@ pub mod security {
 
         async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
             match request.headers().get_one("Authorization") {
-                Some(at) => {
-                    let split = at.split(" ");
-                    let vec = split.collect::<Vec<&str>>();
+                Some(at) if split_token(at).len() == 2 => {
+                    let token = Tokens::decode_token::<AccessClaims>(split_token(at)[1]);
 
-                    if vec.len() != 2 {
-                        Outcome::Success(TariffGuard(
-                            Tariff::default(),
-                            Some(err_unauthorized!("Token is in invalid format")),
-                        ))
-                    } else {
-                        let token = Tokens::decode_token::<AccessClaims>(vec[1]);
-
-                        match token {
-                            Ok(t) => Outcome::Success(TariffGuard(t.claims.tariff, None)),
-                            Err(err) => Outcome::Success(TariffGuard(Tariff::default(), Some(err))),
-                        }
+                    match token {
+                        Ok(t) => Outcome::Success(TariffGuard(t.claims.tariff, None)),
+                        Err(err) => Outcome::Success(TariffGuard(Tariff::default(), Some(err))),
                     }
                 }
+
+                Some(_) => Outcome::Success(TariffGuard(
+                    Tariff::default(),
+                    Some(err_unauthorized!("Token is in invalid format")),
+                )),
 
                 None => Outcome::Success(TariffGuard(Tariff::default(), None)),
             }
@@ -451,14 +439,7 @@ pub mod security {
 
                         Err(HubError::new(kind))
                     }
-                    _ => {
-                        let kind = ErrorKind::Unauthorized(UnauthorizedErrorKind::Generic(
-                            "Faild to decode token",
-                        ));
-                        let error = HubError::new(kind).add(format!("{}", err));
-
-                        Err(error)
-                    }
+                    _ => Err(err_unauthorized!("Faild to decode token", err)),
                 },
             }
         }
@@ -468,6 +449,13 @@ pub mod security {
     #[derive(Debug, Clone, Deserialize)]
     pub struct RefreshResp<'a> {
         pub refresh_token: &'a str,
+    }
+
+    /// Вспомогательная функция
+    /// Разрезает значение заголовка Authorization на части
+    fn split_token(header_value: &str) -> Vec<&str> {
+        let split = header_value.split(" ");
+        split.collect::<Vec<&str>>()
     }
 
     #[cfg(test)]

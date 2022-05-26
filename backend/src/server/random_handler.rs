@@ -27,9 +27,9 @@ pub fn random<'f>(
     let (mut random_category, mut allowed_category) = Category::random(category, true);
     let qilter = Qilter::new(author, lang, flag, tag);
 
-    while random_category.is_some() {
-        match random_category.as_ref().unwrap() {
-            Category::Anecdote => {
+    loop {
+        match random_category.as_ref() {
+            Some(Category::Anecdote) => {
                 let collection = Varys::get::<Shrimp<Anecdote>>(client.0.as_ref(), Varys::Anecdote);
                 let result = Shrimp::<Anecdote>::get_random(&collection, &qilter)?;
 
@@ -47,7 +47,7 @@ pub fn random<'f>(
                 }
             }
 
-            Category::Joke => {
+            Some(Category::Joke) => {
                 let collection = Varys::get::<Shrimp<Joke>>(client.0.as_ref(), Varys::Joke);
                 let result = Shrimp::<Joke>::get_random(&collection, &qilter)?;
 
@@ -65,7 +65,7 @@ pub fn random<'f>(
                 }
             }
 
-            Category::Punch => {
+            Some(Category::Punch) => {
                 let collection = Varys::get::<Shrimp<Punch>>(client.0.as_ref(), Varys::Punch);
                 let result = Shrimp::<Punch>::get_random(&collection, &qilter)?;
 
@@ -82,8 +82,8 @@ pub fn random<'f>(
                     return Ok(resp);
                 }
             }
+
+            None => return Err(err_not_found!("record")),
         }
     }
-
-    Err(err_not_found!("record"))
 }

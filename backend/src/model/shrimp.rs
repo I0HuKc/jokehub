@@ -7,7 +7,6 @@ use std::fmt;
 use uuid::Uuid;
 
 use super::account::Tariff;
-use crate::db::mongo::varys::Varys;
 use crate::errors::HubError;
 
 /// Заголовок любой записи контента
@@ -276,14 +275,6 @@ impl Category {
             } else {
                 (None, Vec::new())
             }
-        }
-    }
-
-    pub fn to_collection(&self) -> Varys {
-        match self {
-            Category::Anecdote => Varys::Anecdote,
-            Category::Joke => Varys::Joke,
-            Category::Punch => Varys::Punch,
         }
     }
 }
