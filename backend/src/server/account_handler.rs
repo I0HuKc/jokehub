@@ -136,6 +136,15 @@ pub fn change_password<'f>(
     Err(err_not_found!("user"))
 }
 
+#[put("/account/theme/to/<theme_name>")]
+pub fn change_theme<'f>(
+    _auth: AuthGuard,
+    client: MongoConn<'f>,
+    theme_name: Theme,
+) -> Result<(), HubError> {
+    User::change_theme(client.0.as_ref(), theme_name, &_auth.0.get_username())
+}
+
 #[post("/account/logout", data = "<jrt>")]
 pub fn logout<'f>(
     _auth: AuthGuard,

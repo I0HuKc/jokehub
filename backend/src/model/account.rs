@@ -1,6 +1,7 @@
 use argon2::Config;
 use mongodb::bson::DateTime as MongoDateTime;
 use rand::Rng;
+use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use strum_macros::EnumIter;
@@ -51,13 +52,32 @@ impl Default for Tariff {
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, Deserialize)]
+#[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
 pub enum Theme {
     #[serde(rename = "light")]
     Light,
 
     #[serde(rename = "dark")]
     Dark,
+}
+
+impl fmt::Display for Theme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl<'a> FromParam<'a> for Theme {
+    type Error = HubError;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        match param {
+            "light" => Ok(Self::Light),
+            "dark" => Ok(Self::Dark),
+
+            _ => Err(HubError::new_unprocessable("Theme type is invalid", None)),
+        }
+    }
 }
 
 impl Default for Theme {
@@ -160,28 +180,29 @@ impl<'a> User {
 
 #[derive(Serialize, Deserialize)]
 pub struct Account {
-    username: String,
-    tariff: Tariff,
-    theme: Theme,
-    sessions: Vec<SessionInfo>,
-    created_at: String,
-    updated_at: String,
+    pub username: String,
+    pub tariff: Tariff,
+    pub theme: Theme,
+    pub sessions: Vec<Sinfo>,
+    pub created_at: String,
+    pub  updated_at: String,
 }
 
+// Session info
 #[derive(Serialize, Deserialize)]
-struct SessionInfo {
+pub struct Sinfo {
     stamp: String,
 }
 
-impl From<Session> for SessionInfo {
+impl From<Session> for Sinfo {
     fn from(s: Session) -> Self {
-        SessionInfo {
+        Sinfo {
             stamp: s.get_stamp(),
         }
     }
 }
 
-impl SessionInfo {
+impl Sinfo {
     fn vec_convert(ov: Vec<Session>) -> Vec<Self> {
         let mut nv: Vec<Self> = Vec::new();
         let _: Vec<_> = ov.into_iter().map(|value| nv.push(value.into())).collect();
@@ -196,7 +217,7 @@ impl Account {
             username: user.username,
             tariff: user.tariff,
             theme: user.theme,
-            sessions: SessionInfo::vec_convert(sessions),
+            sessions: Sinfo::vec_convert(sessions),
             created_at: user.created_at.to_rfc3339_string(),
             updated_at: user.updated_at.to_rfc3339_string(),
         }
@@ -208,6 +229,10 @@ impl Account {
 
     pub fn get_tariff(&self) -> &Tariff {
         &self.tariff
+    }
+
+    pub fn get_theme(&self) -> &Theme {
+        &self.theme
     }
 }
 
@@ -669,11 +694,7 @@ pub mod security {
     mod tests {
         #[test]
         fn token_creation() {
-            match super::Tokens::new(
-                "I0HuKc",
-                super::Level::Padawan,
-                super::Tariff::Basic,
-            ) {
+            match super::Tokens::new("I0HuKc", super::Level::Padawan, super::Tariff::Basic) {
                 Ok(tokens) => {
                     let at = super::Tokens::decode_token::<super::AccessClaims>(
                         tokens.access_token.as_str(),

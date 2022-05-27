@@ -1,5 +1,6 @@
 mod common;
 
+use jokehub::model::account::Theme;
 use rocket::http::{ContentType, Header, Status};
 use rocket::local::blocking::Client;
 use serde::Deserialize;
@@ -177,6 +178,146 @@ fn delete_account() {
             assert_eq!(resp.status(), Status::Ok);
         }
 
+        Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    }
+}
+
+#[test]
+fn change_password() {
+    let path: &str = "/v1/account/password/change";
+    let client = common::test_client().lock().unwrap();
+    let padawan = TestPadawan::new("changepass", "password1234");
+
+    match account::try_login(&client, Box::new(padawan)) {
+        Ok(tokens) => {
+            // Пытаюсь сменить пароль на тот же
+            {
+                let resp = client
+                    .post(format!("{}", path))
+                    .body(json_string!({
+                        "old_password": "password1234",
+                        "new_password": "password1234"
+                    }))
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::UnprocessableEntity);
+            }
+
+            {
+                let resp = client
+                    .post(format!("{}", path))
+                    .body(json_string!({
+                        "old_password": "password1234",
+                        "new_password": "password4321"
+                    }))
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Ok);
+            }
+
+            // Проверяю что пароль действительно изменен
+            {
+                let resp = client
+                    .post("/v1/login")
+                    .body(json_string!({
+                        "username": "changepass",
+                        "password": "password1234" // использую старый пароль
+                    }))
+                    .header(ContentType::JSON)
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::NotFound);
+            }
+
+            // Пытаюсь войти с новым паролем
+            let padawan = TestPadawan::new("changepass", "password4321");
+            match account::try_login(&client, Box::new(padawan)) {
+                Ok(tokens) => {
+                    // Проверяю что до этого все сессии были удалены и сейчас существует
+                    //только текущая и та которая была создана в момент смены пароля.
+                    let resp = client
+                        .get("/v1/account")
+                        .header(bearer!((tokens.access_token)))
+                        .dispatch();
+
+                    assert_eq!(resp.status(), Status::Ok);
+
+                    let body = assert_body!(resp, Account);
+
+                    assert_eq!(body.sessions.len(), 2);
+                }
+                Err(err) => assert!(false, "\n\nFaild to login with new password: {}\n\n", err),
+            }
+        }
+
+        Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    }
+}
+
+#[test]
+fn change_theme() {
+    let path: &str = "/v1/account/theme/to/dark";
+    let client = common::test_client().lock().unwrap();
+    let padawan = TestPadawan::default();
+
+    match account::try_login(&client, Box::new(padawan)) {
+        Ok(tokens) => {
+            let resp = client
+                .put(path)
+                .header(bearer!((tokens.access_token)))
+                .dispatch();
+
+            assert_eq!(resp.status(), Status::Ok);
+
+            // Проверяю что тема действительно обновилась
+            {
+                let resp = client
+                    .get("/v1/account")
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Ok);
+
+                let body = assert_body!(resp, Account);
+                assert_eq!(*body.get_theme(), Theme::Dark);
+            }
+        }
+        Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    }
+}
+
+#[test]
+fn logout_any() {
+    let path: &str = "/v1/account/logout/any";
+    let client = common::test_client().lock().unwrap();
+    let padawan = TestPadawan::default();
+
+    match account::try_login(&client, Box::new(padawan)) {
+        Ok(tokens) => {
+            let resp = client
+                .post(path)
+                .header(bearer!((tokens.access_token)))
+                .dispatch();
+
+            assert_eq!(resp.status(), Status::Ok);
+
+            // Проверю что все сессии удалены
+            {
+                let resp = client
+                    .get("/v1/account")
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Ok);
+
+                let body = assert_body!(resp, Account);
+
+                assert_eq!(body.sessions.len(), 0);
+            }
+        }
         Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
     }
 }

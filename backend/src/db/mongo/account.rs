@@ -4,6 +4,7 @@ use mongodb::results::InsertOneResult;
 use mongodb::sync::Client;
 use mongodb::{bson::doc, sync::Collection};
 
+use crate::model::account::Theme;
 use crate::model::account::{security::Session, User};
 use crate::{
     db::mongo::{varys::Varys, Crud},
@@ -64,6 +65,19 @@ impl<'a> User {
             Ok(ur) if ur.modified_count > 0 => Ok(()),
             Ok(_) => Err(err_not_found!("user")),
             Err(err) => Err(err_internal!("Faild to update user level", err.to_string())),
+        }
+    }
+
+    pub fn change_theme(client: &Client, theme: Theme, username: &str) -> Result<(), HubError> {
+        let collection: Collection<User> = Varys::get(client, Varys::Users);
+
+        let filter = doc! {"username": username};
+        let update = doc! {"$set": {"theme": theme.to_string().to_lowercase(), "updated_at": MongoDateTime::now()}};
+
+        match collection.update_one(filter, update, None) {
+            Ok(ur) if ur.modified_count > 0 => Ok(()),
+            Ok(_) => Err(err_unauthorized!("Faild to find such user")),
+            Err(err) => Err(err_internal!("Faild to change theme", err.to_string())),
         }
     }
 }
