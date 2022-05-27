@@ -7,7 +7,7 @@ use validator::Validate;
 use crate::{
     db::mongo::MongoConn,
     db::mongo::{varys::Varys, Crud},
-    err_internal, err_not_found, err_unauthorized,
+    err_not_found,
     errors::HubError,
     model::{
         account::{
@@ -45,11 +45,10 @@ pub async fn login<'f>(
     let result = User::get_by_username(client.0.as_ref(), jnu.0.username)?;
 
     if result.password_verify(format!("{}", jnu.0.password).as_bytes())? {
-        let tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;
+        let tokens = Tokens::new(&result.username, result.level, result.tariff)?;
 
         // Сохранение токена обновления
-        Session::new(result.username.clone(), tokens.refresh_token.clone())
-            .set(client.0.as_ref())?;
+        Session::new(&result.username, &tokens.refresh_token).set(client.0.as_ref())?;
 
         Ok(Json(tokens))
     } else {
@@ -77,25 +76,18 @@ pub fn refresh_token<'f>(
     let refresh_claims = Tokens::decode_token::<RefreshClaims>(jrt.0.refresh_token)?.claims;
 
     // Удаляю старый токен
-    Session::drop(jrt.0.refresh_token, client.0.as_ref()).and_then(|res| {
-        // Если токена не существовало
-        if res.deleted_count != 1 {
-            Err(err_unauthorized!("Token is not found"))
-        } else {
-            Ok(())
-        }
-    })?;
+    Session::drop(jrt.0.refresh_token, client.0.as_ref())?;
 
     // Достаю пользователя из БД
     let result = User::get_by_username(client.0.as_ref(), refresh_claims.get_username())?;
 
     // Создаю новую пару токенов
-    let new_tokens = Tokens::new(result.username.clone(), result.level, result.tariff)?;
+    let new_tokens = Tokens::new(&result.username, result.level, result.tariff)?;
 
     // Сохраняю новые токены
     Session::new(
-        refresh_claims.get_username(),
-        new_tokens.clone().refresh_token,
+        &refresh_claims.get_username(),
+        &new_tokens.clone().refresh_token,
     )
     .set(client.0.as_ref())?;
 
@@ -107,7 +99,9 @@ pub fn change_password<'f>(
     _auth: AuthGuard,
     client: MongoConn<'f>,
     jcp: Json<ChangePassword>,
-) -> Result<(), HubError> {
+) -> Result<Json<Tokens>, HubError> {
+    jcp.validate()?;
+
     // Проверяю что пароли отличаются
     if jcp.0.old_password == jcp.0.new_password {
         return Err(HubError::new_unprocessable(
@@ -124,16 +118,19 @@ pub fn change_password<'f>(
         // Создаю хеш нового пароля
         let hash = User::password_hashing_apart(&jcp.0.new_password)?;
 
-        // обновляю запись в БД
-        return User::update_password(client.0.as_ref(), _auth.0.get_username(), hash).and_then(
-            |update_result| {
-                if update_result.modified_count < 1 {
-                    Err(err_internal!("Faild to update password"))
-                } else {
-                    Ok(())
-                }
-            },
-        );
+        // Дропаю все активные сессии
+        Session::drop_all(_auth.0.get_username().as_str(), client.0.as_ref())?;
+
+        // Создаю новые токены
+        let tokens = Tokens::new(&_auth.0.get_username(), user.level, user.tariff)?;
+
+        // Создаю новую сессию
+        Session::new(&_auth.0.get_username(), &tokens.refresh_token).set(client.0.as_ref())?;
+
+        // Обновляю запись в БД
+        User::update_password(client.0.as_ref(), _auth.0.get_username(), hash)?;
+
+        return Ok(Json(tokens));
     }
 
     Err(err_not_found!("user"))
@@ -145,33 +142,22 @@ pub fn logout<'f>(
     client: MongoConn<'f>,
     jrt: Json<RefreshResp<'f>>,
 ) -> Result<(), HubError> {
-    // Валидирую входярий токен
+    // Валидирую входящий токен
     Tokens::decode_token::<RefreshClaims>(jrt.0.refresh_token)?;
 
     // Удаляю токен
-    Session::drop(jrt.0.refresh_token, client.0.as_ref()).and_then(|res| {
-        // Если токена не существовало
-        if res.deleted_count != 1 {
-            Err(err_unauthorized!("Token is not found"))
-        } else {
-            Ok(())
-        }
-    })
+    Session::drop(jrt.0.refresh_token, client.0.as_ref())
+}
+
+#[post("/account/logout/any")]
+pub fn logout_any<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(), HubError> {
+    // Дропаю все активные сессии
+    Session::drop_all(_auth.0.get_username().as_str(), client.0.as_ref())
 }
 
 #[delete("/account/delete")]
 pub fn delete_account<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<(), HubError> {
-    User::del_by_username(
-        Varys::get(client.0.as_ref(), Varys::Users),
-        _auth.0.get_username(),
-    )
-    .and_then(|d_result| {
-        if d_result.deleted_count < 1 {
-            Err(err_not_found!("user"))
-        } else {
-            Ok(())
-        }
-    })
+    User::del_by_username(client.0.as_ref(), _auth.0.get_username())
 }
 
 #[put("/privilege/<username>/<level>")]
@@ -193,11 +179,4 @@ pub async fn privilege<'f>(
         query_validation(username)?,
         level_validation(level)?,
     )
-    .and_then(|up_result| {
-        if up_result.matched_count < 1 {
-            Err(err_not_found!("user"))
-        } else {
-            Ok(())
-        }
-    })
 }

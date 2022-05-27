@@ -47,6 +47,7 @@ pub fn rocket() -> _ {
                 refresh_token,
                 change_password,
                 logout,
+                logout_any,
                 delete_account,
                 privilege,
             ],

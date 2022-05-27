@@ -19,14 +19,8 @@ where
         let update = doc! {"$inc": {"_header.counter": 1}};
 
         match collection.find_one_and_update(filter, update, None) {
-            Ok(result) => {
-                if let Some(shrimp) = result {
-                    Ok(shrimp)
-                } else {
-                    Err(err_not_found!(collection.name()))
-                }
-            }
-
+            Ok(Some(shrimp)) => Ok(shrimp),
+            Ok(None) => Err(err_not_found!(collection.name())),
             Err(err) => Err(err_internal!(err.to_string())),
         }
     }
@@ -42,7 +36,8 @@ where
         let update = doc! {"$inc": {"_header.counter": 1}};
 
         match collection.update_one(query, update, None) {
-            Ok(_) => Ok(self),
+            Ok(ur) if ur.modified_count > 0 => Ok(self),
+            Ok(_) => Err(err_not_found!("record", "Increment failed")),
             Err(err) => Err(err_internal!(
                 "Faild to increment record counter",
                 err.to_string()

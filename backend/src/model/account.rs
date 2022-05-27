@@ -84,7 +84,16 @@ pub struct NewUser {
 
 #[derive(Clone, Validate, Deserialize)]
 pub struct ChangePassword {
+    #[validate(
+        length(min = 8, max = 20, message = "Lenght is invalid"),
+        custom(function = "validate_query", message = "Invalid format")
+    )]
     pub old_password: String,
+
+    #[validate(
+        length(min = 8, max = 20, message = "Lenght is invalid"),
+        custom(function = "validate_query", message = "Invalid format")
+    )]
     pub new_password: String,
 }
 
@@ -331,10 +340,10 @@ pub mod security {
     }
 
     impl Session {
-        pub fn new(username: String, token: String) -> Self {
+        pub fn new(username: &str, token: &str) -> Self {
             Session {
-                token,
-                username,
+                token: token.to_string(),
+                username: username.to_string(),
                 stamp: MongoDateTime::now(),
             }
         }
@@ -582,8 +591,8 @@ pub mod security {
     }
 
     impl<'a> Tokens {
-        pub fn new(username: String, level: Level, tariff: Tariff) -> Result<Tokens, HubError> {
-            let access_claims = AccessClaims::new(username, level, tariff);
+        pub fn new(username: &str, level: Level, tariff: Tariff) -> Result<Tokens, HubError> {
+            let access_claims = AccessClaims::new(username.to_string(), level, tariff);
             let refresh_claims = RefreshClaims::new(&access_claims);
 
             let tokens = Tokens {
@@ -661,7 +670,7 @@ pub mod security {
         #[test]
         fn token_creation() {
             match super::Tokens::new(
-                String::from("I0HuKc"),
+                "I0HuKc",
                 super::Level::Padawan,
                 super::Tariff::Basic,
             ) {
