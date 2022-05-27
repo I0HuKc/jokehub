@@ -36,6 +36,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "username": "tsith",
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$fwgzbnRyxZiEVtwa5X42gWFVcOpkI3QY6iTRpUqbmDQ\$PRJm/l7Wlee/0i4bfHKEdWx3mpfHlIKH+hJqDPDP/rU",
             "level": "sith",
+            "theme": "light",
             "tariff": "enterprice",
             "created_at": new Date(),
             "updated_at": new Date()
@@ -47,6 +48,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "username": "tmaster",
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$fwgzbnRyxZiEVtwa5X42gWFVcOpkI3QY6iTRpUqbmDQ\$PRJm/l7Wlee/0i4bfHKEdWx3mpfHlIKH+hJqDPDP/rU",
             "level": "master",
+            "theme": "light",
             "tariff": "enterprice",
             "created_at": new Date(),
             "updated_at": new Date()
@@ -59,6 +61,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             "hash": "\$argon2i\$v=19\$m=4096,t=3,p=1\$fwgzbnRyxZiEVtwa5X42gWFVcOpkI3QY6iTRpUqbmDQ\$PRJm/l7Wlee/0i4bfHKEdWx3mpfHlIKH+hJqDPDP/rU",
             "level": "padawan",
             "tariff": "free",
+            "theme": "light",
             "created_at": new Date(),
             "updated_at": new Date()
         }
