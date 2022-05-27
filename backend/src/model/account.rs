@@ -185,7 +185,7 @@ pub struct Account {
     pub theme: Theme,
     pub sessions: Vec<Sinfo>,
     pub created_at: String,
-    pub  updated_at: String,
+    pub updated_at: String,
 }
 
 // Session info
@@ -236,6 +236,20 @@ impl Account {
     }
 }
 
+pub struct State {
+    pub nn: bool,
+    pub theme: Theme,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            nn: Default::default(),
+            theme: Default::default(),
+        }
+    }
+}
+
 pub mod notification {
     use bson::oid::ObjectId;
     use mongodb::bson::DateTime as MongoDateTime;
@@ -251,6 +265,9 @@ pub mod notification {
 
         #[serde(rename = "error")]
         Error,
+
+        #[serde(rename = "general")]
+        General,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -292,13 +309,9 @@ pub mod notification {
     }
 
     impl Body {
-        pub fn new(
-            title: String,
-            description: Option<String>,
-            actions: Option<Vec<Action>>,
-        ) -> Self {
+        pub fn new(title: &str, description: Option<String>, actions: Option<Vec<Action>>) -> Self {
             Self {
-                title,
+                title: title.to_string(),
                 description,
                 actions,
             }
@@ -323,14 +336,40 @@ pub mod notification {
     }
 
     impl Notification {
-        pub fn new(from: String, to: String, kind: NotifyKind, body: Body) -> Self {
+        pub fn new(from: &str, to: &str, kind: NotifyKind, body: Body) -> Self {
             Self {
                 id: bson::oid::ObjectId::new(),
-                from,
-                to,
+                from: from.to_string(),
+                to: to.to_string(),
                 kind,
                 body,
                 meta_data: MetaData::default(),
+            }
+        }
+    }
+}
+
+pub mod favorites {
+    use bson::oid::ObjectId;
+    use mongodb::bson::DateTime as MongoDateTime;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Favorite {
+        #[serde(rename = "_id")]
+        pub id: ObjectId,
+        pub content_id: String,
+        pub master: String,
+        pub added_at: MongoDateTime,
+    }
+
+    impl Favorite {
+        pub fn new(content_id: String, master: String) -> Self {
+            Self {
+                id: bson::oid::ObjectId::new(),
+                content_id,
+                master,
+                added_at: MongoDateTime::now(),
             }
         }
     }

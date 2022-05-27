@@ -111,5 +111,20 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
         {
             "expireAfterSeconds" : 60
         }
-    )
+    );
+
+    db.createCollection("favorite");
+    db.favorite.createIndex(
+        {
+            "content_id": 1,
+        }, 
+        {
+            "unique": true, 
+            "partialFilterExpression": {
+                "content_id": {
+                    \$type: "string"
+                },
+            }
+        }
+    );
 EOF

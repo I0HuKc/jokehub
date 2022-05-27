@@ -4,6 +4,8 @@ use mongodb::results::InsertOneResult;
 use mongodb::sync::Client;
 use mongodb::{bson::doc, sync::Collection};
 
+use crate::model::account::favorites::Favorite;
+use crate::model::account::notification::Notification;
 use crate::model::account::Theme;
 use crate::model::account::{security::Session, User};
 use crate::{
@@ -130,3 +132,7 @@ impl Session {
         }
     }
 }
+
+impl<'a> Crud<'a, Notification> for Notification {}
+
+impl<'a> Crud<'a, Favorite> for Favorite {}

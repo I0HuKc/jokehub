@@ -1,6 +1,7 @@
 mod account_handler;
 mod anecdote_handler;
 mod base_handler;
+mod favorite_handler;
 mod joke_handler;
 mod punch_handler;
 mod random_handler;
@@ -13,8 +14,8 @@ use crate::db::DbManage;
 use self::lingua::LinguaManage;
 
 use {
-    account_handler::*, anecdote_handler::*, base_handler::*, joke_handler::*, punch_handler::*,
-    random_handler::*,
+    account_handler::*, anecdote_handler::*, base_handler::*, favorite_handler::*, joke_handler::*,
+    punch_handler::*, random_handler::*,
 };
 
 #[launch]
@@ -51,6 +52,8 @@ pub fn rocket() -> _ {
                 logout_any,
                 delete_account,
                 privilege,
+                // Favorite
+                favorite_add
             ],
         )
         .register("/", catchers![not_found, unauthorized, internal, forbidden])

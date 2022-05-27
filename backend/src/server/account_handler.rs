@@ -11,6 +11,7 @@ use crate::{
     errors::HubError,
     model::{
         account::{
+            notification::{Notification, NotifyKind},
             security::{AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens},
             validation::level_validation,
             *,
@@ -187,5 +188,17 @@ pub async fn privilege<'f>(
         Varys::get(client.0.as_ref(), Varys::Users),
         query_validation(username)?,
         level_validation(level)?,
-    )
+    )?;
+
+    // Создание уведомления пользователю чья роль была обновлена
+    let ntf = Notification::new(
+        "System",
+        username,
+        NotifyKind::General,
+        notification::Body::new("Your level has been updated", None, None),
+    );
+
+    Notification::create(Varys::get(client.0.as_ref(), Varys::Notification), ntf)?;
+
+    Ok(())
 }
