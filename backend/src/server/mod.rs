@@ -53,7 +53,8 @@ pub fn rocket() -> _ {
                 delete_account,
                 privilege,
                 // Favorite
-                favorite_add
+                favorite_add,
+                favorite_remove
             ],
         )
         .register("/", catchers![not_found, unauthorized, internal, forbidden])

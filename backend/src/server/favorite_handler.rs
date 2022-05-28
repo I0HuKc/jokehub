@@ -1,4 +1,5 @@
 use mongodb::bson::doc;
+use rocket::serde::json::Json;
 
 use crate::{
     db::mongo::MongoConn,
@@ -25,3 +26,20 @@ pub fn favorite_add<'f>(
 
     Ok(())
 }
+
+#[delete("/account/favorite/<record_id>")]
+pub fn favorite_remove<'f>(
+    _auth: AuthGuard,
+    client: MongoConn<'f>,
+    record_id: &str,
+) -> Result<(), HubError> {
+    Favorite::del_by_record_id(client.0.as_ref(), record_id)
+}
+
+// pub fn favorite_all<'f>(
+//     _auth: AuthGuard,
+//     client: MongoConn<'f>,
+//     record_id: &str,
+// ) -> Result<Json<Vec<Favorite>>, HubError> {
+
+// }

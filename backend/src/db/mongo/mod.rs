@@ -20,7 +20,7 @@ use rocket::{
     Request, State,
 };
 
-use crate::err_not_found;
+use crate::{err_not_found, model::account::favorites::Favorite};
 
 #[derive(Clone)]
 pub struct MongoConn<'a>(pub &'a State<Box<Client>>);
@@ -76,6 +76,10 @@ where
 
         Ok(rersult)
     }
+
+    // fn slice(client: &Client, limit: u8, offset: u8) -> Result<Vec<Favorite>, HubError> {
+
+    // }
 
     fn get_by_id(collection: Collection<T>, id: &str) -> Result<T, HubError> {
         match collection.find_one(doc! { "_id":  id}, None)? {

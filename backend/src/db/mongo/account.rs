@@ -136,3 +136,15 @@ impl Session {
 impl<'a> Crud<'a, Notification> for Notification {}
 
 impl<'a> Crud<'a, Favorite> for Favorite {}
+
+impl Favorite {
+    pub fn del_by_record_id(client: &Client, record_id: &str) -> Result<(), HubError> {
+        let collection: Collection<Favorite> = Varys::get(client, Varys::Favorite);
+
+        match collection.delete_one(doc! {"content_id" : record_id}, None) {
+            Ok(dr) if dr.deleted_count > 0 => Ok(()),
+            Ok(_) => Err(err_not_found!("favorite")),
+            Err(err) => Err(err_internal!("Falid to remove from favorite", err)),
+        }
+    }
+}
