@@ -66,6 +66,8 @@ impl<'r> FromRequest<'r> for MongoConn<'r> {
 
 use crate::errors::HubError;
 
+use self::varys::Varys;
+
 pub trait Crud<'a, T>
 where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,
@@ -77,7 +79,9 @@ where
         Ok(rersult)
     }
 
-    // fn slice(client: &Client, limit: u8, offset: u8) -> Result<Vec<Favorite>, HubError> {
+    // -> Result<Vec<Favorite>, HubError> 
+    // fn slice(collection: Collection<T>, limit: u8, offset: u8, ff: Document ){
+    //     let mut cursor = collection.find(ff, None)?;
 
     // }
 

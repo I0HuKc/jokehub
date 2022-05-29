@@ -36,6 +36,7 @@ pub fn favorite_remove<'f>(
     Favorite::del_by_record_id(client.0.as_ref(), record_id)
 }
 
+
 // pub fn favorite_all<'f>(
 //     _auth: AuthGuard,
 //     client: MongoConn<'f>,
