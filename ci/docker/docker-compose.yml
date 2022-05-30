@@ -1,14 +1,22 @@
 version: "3.9"
 services:
+  jokehub_ngnix:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+    container_name: jokehub_ngnix
+    restart: unless-stopped
+
   jokehub_backend:
     build:
-      dockerfile: docker/backend.Dockerfile
-      context: ../
+      dockerfile: ci/docker/backend.Dockerfile
+      context: ../../
     environment:
       - MONGO_DB_URL=mongodb://$MONGO_USER:$MONGO_USER_PASSWORD@jokehub_mongodb:27017/$MONGO_INITDB_DATABASE?w=majority
       - MONGO_DATABASE_NAME=$MONGO_INITDB_DATABASE
-    ports:
-      - "8000:8000"
     depends_on:
       jokehub_mongodb:
         condition: service_healthy

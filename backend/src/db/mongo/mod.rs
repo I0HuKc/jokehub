@@ -20,7 +20,7 @@ use rocket::{
     Request, State,
 };
 
-use crate::{err_not_found, model::account::favorites::Favorite};
+use crate::{err_not_found, errors::HubError};
 
 #[derive(Clone)]
 pub struct MongoConn<'a>(pub &'a State<Box<Client>>);
@@ -64,10 +64,6 @@ impl<'r> FromRequest<'r> for MongoConn<'r> {
     }
 }
 
-use crate::errors::HubError;
-
-use self::varys::Varys;
-
 pub trait Crud<'a, T>
 where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,
@@ -79,7 +75,7 @@ where
         Ok(rersult)
     }
 
-    // -> Result<Vec<Favorite>, HubError> 
+    // -> Result<Vec<Favorite>, HubError>
     // fn slice(collection: Collection<T>, limit: u8, offset: u8, ff: Document ){
     //     let mut cursor = collection.find(ff, None)?;
 

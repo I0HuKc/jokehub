@@ -14,8 +14,8 @@ CACHE = yes
 GENERAL_BUILD_ARGS = --release
 BACKEND_BUILD_ARGS = $(GENERAL_BUILD_ARGS) -p jokehub
 
-DOCKER_ENV = local
-DOCKER_DIR = docker
+DOCKER_ENV = 
+DOCKER_DIR = ci/docker
 
 
 include .env
@@ -29,7 +29,7 @@ endef
 
 # Функция генерирующая базу для работы с docker
 define base_docker_cmd
-	echo docker-compose -f $(1)/docker-compose.$(2).yml
+	echo docker-compose -f $(1)/docker-compose$(2).yml
 endef
 
 
@@ -42,8 +42,13 @@ endef
 	config-backend \
 	test-backend \
 
+	run-frontend \
+	build-backend \ 
+
 	env \
 
+run-frontend:
+	cd frontend && npx next dev
 
 # Предварительный просмотр docker-compose файла
 config-backend:
@@ -76,7 +81,7 @@ test-backend:
 	scripts/create_test_env.sh
 
 #	Запускаю необходимые службы
-	$(shell $(call base_docker_cmd, $(DOCKER_DIR),test)) up -d
+	$(shell $(call base_docker_cmd, $(DOCKER_DIR),.test)) up -d
 
 #	Запускаю тесты
 	scripts/run_tests.sh	
@@ -85,7 +90,7 @@ test-backend:
 	docker stop jokehub_mongodb_test	
 
 #	Удалаю все что создали контейнеры тестовых служб
-	$(shell $(call base_docker_cmd, $(DOCKER_DIR),test)) down \
+	$(shell $(call base_docker_cmd, $(DOCKER_DIR),.test)) down \
 		--volumes \
 		--remove-orphans
 
