@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: "CoFo Sans";
+  src: url("../fonts/CoFoSans-Regular.ttf");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "CoFo Sans";
+  src: url("../fonts/CoFoSans-Medium.ttf");
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "CoFo Sans";
+  src: url("../fonts/CoFoSans-Bold.ttf");
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "CoFo Sans";
+  src: url("../fonts/CoFoSans-Black.ttf");
+  font-weight: 800;
+}
