@@ -67,6 +67,31 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
         }
     );
 
+    db.createCollection("sessions");
+    db.sessions.createIndex(
+        {
+            "stamp" : 1
+        }, 
+        {
+            "expireAfterSeconds" : 60 * 60 * 24 * 7
+        }
+    )
+
+    db.createCollection("api_keys");
+    db.api_keys.createIndex(
+        {
+            "md.username": 1
+        }, 
+        {
+            "unique": true, 
+            "partialFilterExpression": {
+                "md.username": {
+                    \$type: "string"
+                }
+            }
+        }
+    );
+
     db.createCollection("anecdote");
     db.anecdote.createIndex(
         {

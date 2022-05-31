@@ -103,6 +103,21 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
         }
     )
 
+    db.createCollection("api_keys");
+    db.api_keys.createIndex(
+        {
+            "username": 1
+        }, 
+        {
+            "unique": true, 
+            "partialFilterExpression": {
+                "username": {
+                    \$type: "string"
+                }
+            }
+        }
+    );
+
     db.createCollection("notifications");
     db.notifications.createIndex(
         {
