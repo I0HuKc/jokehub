@@ -12,7 +12,9 @@ use crate::{
     model::{
         account::{
             notification::{Notification, NotifyKind},
-            security::{AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens},
+            security::{
+                ApiKey, AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens,
+            },
             validation::level_validation,
             *,
         },
@@ -29,7 +31,13 @@ pub async fn registration<'f>(
 
     let result = User::create(
         Varys::get(client.0.as_ref(), Varys::Users),
-        User::from(jnu.0).password_hashing()?,
+        User::from(jnu.0.clone()).password_hashing()?,
+    )?;
+
+    // Создание API ключа
+    ApiKey::create(
+        Varys::get(client.0.as_ref(), Varys::ApiKeys),
+        ApiKey::new(jnu.0.username),
     )?;
 
     let resp = json!({"id": result.inserted_id});
@@ -64,8 +72,9 @@ pub async fn account<'f>(
 ) -> Result<Json<Account>, HubError> {
     let user = User::get_by_username(client.0.as_ref(), _auth.0.get_username())?;
     let sessions = Session::roll(user.username.as_str(), client.0.as_ref())?;
+    let api_key = ApiKey::get_by_username(client.0.as_ref(), user.username.as_str())?;
 
-    Ok(Json(Account::new(user, sessions)))
+    Ok(Json(Account::new(user, sessions, api_key.get_key())))
 }
 
 #[post("/account/token/refresh", data = "<jrt>")]
@@ -93,6 +102,17 @@ pub fn refresh_token<'f>(
     .set(client.0.as_ref())?;
 
     Ok(Json(new_tokens))
+}
+
+#[put("/account/api-key/key")]
+pub fn regen_api_key<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<Value, HubError> {
+    let data = ApiKey::regen(
+        client.0.as_ref(),
+        _auth.0.get_username().as_str(),
+        ApiKey::gen_key(),
+    )?;
+
+    Ok(json!({"new_key": data.get_key()}))
 }
 
 #[post("/account/password/change", data = "<jcp>")]

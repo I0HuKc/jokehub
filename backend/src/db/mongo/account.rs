@@ -6,16 +6,16 @@ use mongodb::{bson::doc, sync::Collection};
 
 use crate::model::account::favorites::Favorite;
 use crate::model::account::notification::Notification;
-use crate::model::account::Theme;
-use crate::model::account::{security::Session, User};
+use crate::model::account::{security::ApiKey, security::Session, User};
+use crate::model::account::{Tariff, Theme};
 use crate::{
     db::mongo::{varys::Varys, Crud},
     err_internal, err_not_found, err_unauthorized,
     errors::HubError,
+    macro_crud,
 };
 
-impl<'a> Crud<'a, User> for User {}
-
+macro_crud!(User);
 impl<'a> User {
     pub fn get_by_username(client: &Client, username: String) -> Result<User, HubError> {
         let collection: Collection<User> = Varys::get(client, Varys::Users);
@@ -84,6 +84,75 @@ impl<'a> User {
     }
 }
 
+macro_crud!(ApiKey);
+impl ApiKey {
+    pub fn get_by_username(client: &Client, username: &str) -> Result<ApiKey, HubError> {
+        let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
+        let filter = doc! {"username": username};
+
+        match collection.find_one(filter, None)? {
+            Some(data) => Ok(data),
+            None => Err(err_not_found!("api key")),
+        }
+    }
+
+    pub fn get_by_key(client: &Client, key: &str) -> Result<ApiKey, HubError> {
+        let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
+        let filter = doc! {"key": key};
+        let update = doc! {"$inc": {"nonce": 1}};
+
+        match collection.find_one_and_update(filter, update, None) {
+            Ok(Some(data)) => Ok(data),
+            Ok(None) => Err(err_not_found!("api key")),
+            Err(err) => Err(err_internal!("Faiild to get api key", err.to_string())),
+        }
+    }
+
+    pub fn update_tariff(
+        client: &Client,
+        username: &str,
+        new_tariff: Tariff,
+    ) -> Result<ApiKey, HubError> {
+        let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
+        let filter = doc! {"username": username};
+        let update = doc! {"$set": {
+            "tariff": new_tariff.to_string().to_lowercase()
+        }};
+
+        match collection.update_one(filter.clone(), update, None) {
+            Ok(ur) if ur.modified_count > 0 => {
+                let data = collection.find_one(filter, None)?.unwrap();
+
+                Ok(data)
+            }
+            Ok(_) => Err(err_not_found!("api key")),
+            Err(err) => Err(err_internal!(
+                "Faild to regenerate api key",
+                err.to_string()
+            )),
+        }
+    }
+
+    pub fn regen(client: &Client, username: &str, new_key: String) -> Result<ApiKey, HubError> {
+        let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
+        let filter = doc! {"md.username": username};
+        let update = doc! {"$set": {"key": new_key}};
+
+        match collection.update_one(filter.clone(), update, None) {
+            Ok(ur) if ur.modified_count > 0 => {
+                let data = collection.find_one(filter, None)?.unwrap();
+
+                Ok(data)
+            }
+            Ok(_) => Err(err_not_found!("api key")),
+            Err(err) => Err(err_internal!(
+                "Faild to regenerate api key",
+                err.to_string()
+            )),
+        }
+    }
+}
+
 impl Session {
     pub fn set<'f>(&self, client: &Client) -> Result<InsertOneResult, HubError> {
         let collection: Collection<Document> = Varys::get(client, Varys::Sessions);
@@ -133,10 +202,10 @@ impl Session {
     }
 }
 
-impl<'a> Crud<'a, Notification> for Notification {}
+macro_crud!(Notification);
+impl Notification {}
 
-impl<'a> Crud<'a, Favorite> for Favorite {}
-
+macro_crud!(Favorite);
 impl Favorite {
     pub fn del_by_record_id(client: &Client, record_id: &str) -> Result<(), HubError> {
         let collection: Collection<Favorite> = Varys::get(client, Varys::Favorite);

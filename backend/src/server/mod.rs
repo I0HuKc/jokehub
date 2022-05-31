@@ -46,6 +46,7 @@ pub fn rocket() -> _ {
                 login,
                 account,
                 refresh_token,
+                regen_api_key,
                 change_password,
                 change_theme,
                 logout,

@@ -132,6 +132,52 @@ fn refresh_token() {
 }
 
 #[test]
+fn api_key_regen() {
+    let path: &str = "/v1/account/api-key/key";
+    let client = common::test_client().lock().unwrap();
+    let padawan = TestPadawan::default();
+
+    match account::try_login(&client, Box::new(padawan)) {
+        Ok(tokens) => {
+            let old_api_key: String;
+
+            // Получаю старый api ключ
+            {
+                let resp = client
+                    .get("/v1/account")
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Ok);
+
+                let body = assert_body!(resp, Account);
+                old_api_key = body.api_key;
+            }
+
+            // Обновляю ключ
+            {
+                let resp = client
+                    .put(path)
+                    .header(bearer!((tokens.access_token)))
+                    .dispatch();
+
+                assert_eq!(resp.status(), Status::Ok);
+
+                #[derive(Deserialize)]
+                struct Resp {
+                    new_key: String,
+                }
+
+                let body = assert_body!(resp, Resp);
+                assert_ne!(body.new_key, old_api_key);
+            }
+        }
+
+        Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
+    }
+}
+
+#[test]
 fn logout() {
     let path: &str = "/v1/account/logout";
     let client = common::test_client().lock().unwrap();

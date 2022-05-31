@@ -6,7 +6,8 @@ use crate::{
     err_not_found,
     errors::HubError,
     model::{
-        account::security::TariffGuard,
+        account::security::ApiKeyGuard,
+        account::Tariff,
         anecdote::Anecdote,
         joke::Joke,
         punch::Punch,
@@ -16,7 +17,7 @@ use crate::{
 
 #[get("/random?<category>&<flag>&<tag>&<author>&<lang>")]
 pub fn random<'f>(
-    _tariff: TariffGuard,
+    _api_key: ApiKeyGuard,
     client: MongoConn<'f>,
     category: Option<Vec<Category>>,
     flag: Option<Vec<Flag>>,
@@ -26,6 +27,10 @@ pub fn random<'f>(
 ) -> Result<Value, HubError> {
     let (mut random_category, mut allowed_category) = Category::random(category, true);
     let qilter = Qilter::new(author, lang, flag, tag);
+    let tariff: Tariff = match _api_key.0 {
+        Some(data) => data.get_tariff(),
+        None => Tariff::default(),
+    };
 
     loop {
         match random_category.as_ref() {
@@ -41,7 +46,7 @@ pub fn random<'f>(
                         .as_ref()
                         .unwrap()
                         .inc_counter(&collection)?
-                        .tariffing(&_tariff.0, &_tariff.1);
+                        .tariffing(&tariff, &None);
 
                     return Ok(resp);
                 }
@@ -59,7 +64,7 @@ pub fn random<'f>(
                         .as_ref()
                         .unwrap()
                         .inc_counter(&collection)?
-                        .tariffing(&_tariff.0, &_tariff.1);
+                        .tariffing(&tariff, &None);
 
                     return Ok(resp);
                 }
@@ -77,7 +82,7 @@ pub fn random<'f>(
                         .as_ref()
                         .unwrap()
                         .inc_counter(&collection)?
-                        .tariffing(&_tariff.0, &_tariff.1);
+                        .tariffing(&tariff, &None);
 
                     return Ok(resp);
                 }

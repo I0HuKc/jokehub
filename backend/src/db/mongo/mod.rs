@@ -64,6 +64,13 @@ impl<'r> FromRequest<'r> for MongoConn<'r> {
     }
 }
 
+#[macro_export]
+macro_rules! macro_crud {
+    ($t:ident) => {
+        impl<'a> Crud<'a, $t> for $t {}
+    };
+}
+
 pub trait Crud<'a, T>
 where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,

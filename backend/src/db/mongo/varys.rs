@@ -7,6 +7,7 @@ use crate::model::shrimp::Category;
 pub enum Varys {
     Users,
     Sessions,
+    ApiKeys,
     Notification,
     Favorite,
 
@@ -38,6 +39,10 @@ impl Varys {
             Varys::Sessions => client
                 .database(dotenv!("MONGO_DATABASE_NAME"))
                 .collection("sessions"),
+
+            Varys::ApiKeys => client
+                .database(dotenv!("MONGO_DATABASE_NAME"))
+                .collection("api_keys"),
 
             Varys::Notification => client
                 .database(dotenv!("MONGO_DATABASE_NAME"))

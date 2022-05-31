@@ -52,6 +52,12 @@ impl Default for Tariff {
     }
 }
 
+impl fmt::Display for Tariff {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
 pub enum Theme {
     #[serde(rename = "light")]
@@ -183,6 +189,7 @@ pub struct Account {
     pub username: String,
     pub tariff: Tariff,
     pub theme: Theme,
+    pub api_key: String,
     pub sessions: Vec<Sinfo>,
     pub created_at: String,
     pub updated_at: String,
@@ -212,11 +219,12 @@ impl Sinfo {
 }
 
 impl Account {
-    pub fn new(user: User, sessions: Vec<Session>) -> Self {
+    pub fn new(user: User, sessions: Vec<Session>, api_key: &str) -> Self {
         Account {
             username: user.username,
             tariff: user.tariff,
             theme: user.theme,
+            api_key: api_key.to_string(),
             sessions: Sinfo::vec_convert(sessions),
             created_at: user.created_at.to_rfc3339_string(),
             updated_at: user.updated_at.to_rfc3339_string(),
@@ -237,6 +245,7 @@ impl Account {
 }
 
 pub struct State {
+    // new notifictions
     pub nn: bool,
     pub theme: Theme,
 }
@@ -376,25 +385,66 @@ pub mod favorites {
 }
 
 pub mod security {
-    use std::borrow::Cow;
-
     use chrono::prelude::*;
     use jsonwebtoken::TokenData;
     use jsonwebtoken::{errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Validation};
+    use rand::{distributions::Alphanumeric, Rng};
     use rocket::http::Status;
-    use rocket::Route;
     use rocket::{
         request, request::FromRequest, request::Outcome, serde::DeserializeOwned, Request,
     };
+    use rocket::{Route, State};
     use serde::{Deserialize, Serialize};
+    use std::borrow::Cow;
     use uuid::Uuid;
 
+    use crate::err_internal;
     use crate::{
         err_forbidden, err_unauthorized,
         errors::{ErrorKind, HubError, UnauthorizedErrorKind},
         model::account::{Level, Tariff},
     };
     use mongodb::bson::DateTime as MongoDateTime;
+    use mongodb::sync::Client;
+
+    #[derive(Serialize, Deserialize)]
+    pub struct ApiKey {
+        key: String,
+        nonce: usize,
+        tariff: Tariff,
+        username: String,
+        created_at: String,
+    }
+
+    impl ApiKey {
+        pub fn new(username: String) -> Self {
+            Self {
+                key: ApiKey::gen_key(),
+                nonce: 0,
+                tariff: Tariff::default(),
+                username,
+                created_at: MongoDateTime::now().to_rfc3339_string(),
+            }
+        }
+
+        pub fn gen_key() -> String {
+            rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(50)
+                .map(char::from)
+                .collect()
+        }
+    }
+
+    impl ApiKey {
+        pub fn get_key(&self) -> &str {
+            &self.key
+        }
+
+        pub fn get_tariff(&self) -> Tariff {
+            self.tariff.clone()
+        }
+    }
 
     #[derive(Serialize, Deserialize, Clone)]
     pub struct Session {
@@ -428,8 +478,6 @@ pub mod security {
         browser: String,
         os: String,
     }
-
-    const SECRET: &str = "secret297152aebda7";
 
     /// Полезная нагрузка токена доступа
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -563,6 +611,35 @@ pub mod security {
         }
     }
 
+    pub struct ApiKeyGuard(pub Option<ApiKey>);
+
+    #[rocket::async_trait]
+    impl<'r> FromRequest<'r> for ApiKeyGuard {
+        type Error = HubError;
+
+        async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+            let outcome = request.guard::<&State<Box<Client>>>().await;
+
+            match outcome {
+                Outcome::Success(client) => match request.headers().get_one("Api-Key") {
+                    Some(key) => match ApiKey::get_by_key(client, key) {
+                        Ok(key_data) => Outcome::Success(ApiKeyGuard(Some(key_data))),
+                        Err(err) => Outcome::Failure((Status::InternalServerError, err)),
+                    },
+
+                    None => Outcome::Success(ApiKeyGuard(None)),
+                },
+
+                Outcome::Failure((status, _)) => Outcome::Failure((
+                    status,
+                    err_internal!("Faild to get db client", "In ApiKeyGuard, from outcome"),
+                )),
+
+                Outcome::Forward(_) => todo!(),
+            }
+        }
+    }
+
     /// Индивидуальный охранник, необходим когда авторизация необязательна.
     /// Если в заголовке нет токена доступа, тогда по умолчанию применяется тариф Free
     /// Если токен присутствует, используется тариф содержащийся в токене
@@ -672,7 +749,7 @@ pub mod security {
             jsonwebtoken::encode(
                 &jsonwebtoken::Header::default(),
                 ac,
-                &EncodingKey::from_secret(SECRET.as_ref()),
+                &EncodingKey::from_secret(dotenv!("SSK").as_ref()),
             )
             .map_err(|err| {
                 HubError::new_internal("Failed to create access token", Some(Vec::new()))
@@ -685,7 +762,7 @@ pub mod security {
             jsonwebtoken::encode(
                 &jsonwebtoken::Header::default(),
                 rc,
-                &EncodingKey::from_secret(SECRET.as_ref()),
+                &EncodingKey::from_secret(dotenv!("SSK").as_ref()),
             )
             .map_err(|err| {
                 HubError::new_internal("Failed to create refresh token", Some(Vec::new()))
@@ -700,7 +777,7 @@ pub mod security {
         {
             match jsonwebtoken::decode::<T>(
                 &token,
-                &DecodingKey::from_secret(SECRET.as_ref()),
+                &DecodingKey::from_secret(dotenv!("SSK").as_ref()),
                 &Validation::default(),
             ) {
                 Ok(token_data) => Ok(token_data),
