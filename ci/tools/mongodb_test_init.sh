@@ -80,12 +80,12 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
     db.createCollection("api_keys");
     db.api_keys.createIndex(
         {
-            "md.username": 1
+            "username": 1
         }, 
         {
             "unique": true, 
             "partialFilterExpression": {
-                "md.username": {
+                "username": {
                     \$type: "string"
                 }
             }

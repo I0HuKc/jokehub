@@ -135,7 +135,7 @@ impl ApiKey {
 
     pub fn regen(client: &Client, username: &str, new_key: String) -> Result<ApiKey, HubError> {
         let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
-        let filter = doc! {"md.username": username};
+        let filter = doc! {"username": username};
         let update = doc! {"$set": {"key": new_key}};
 
         match collection.update_one(filter.clone(), update, None) {
