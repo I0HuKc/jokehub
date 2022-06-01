@@ -10,8 +10,7 @@ module.exports = {
       },
 
       colors: {
-        "slakker": '#FFE9EC',
-        "tblur": '#ea4c89'
+        "perfo": '#337157',
       }
     },
   },

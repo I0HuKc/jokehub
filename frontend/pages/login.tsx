@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Layout from "../components/layout";
 import { Auth } from "../types/account";
-import { Error } from "../types/base";
+import { HubError } from "../types/base";
 
 const LoginPage = () => {
   interface LoginForm {
@@ -14,7 +14,7 @@ const LoginPage = () => {
 
   interface ErrBlock {
     display?: boolean;
-    err: Error;
+    err?: HubError;
   }
 
   const [state, setState] = React.useState<LoginForm>();
@@ -30,15 +30,13 @@ const LoginPage = () => {
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-
-
     let result = await axios
       .post<Auth>("/api/v1/login", state)
       .then(async (resp) => {
         console.log(resp.data.access_token);
       })
-      .catch((err: AxiosError<Error>) => {
-        togErrBlock({ display: true, text: err.response?.data.error });
+      .catch((err: AxiosError<HubError>) => {
+        togErrBlock({ display: true, err: err.response?.data });
       });
   };
 
@@ -131,8 +129,9 @@ const LoginPage = () => {
                   </div>
 
                   {err_block?.display ? (
-                    <div className="bg-red-100 border border-red-200 rounded-md w-full p-5">
-                      <p className="text-sm"> {err_block.text}</p>
+                    <div className="bg-red-50 border border-red-100 rounded-md w-full px-5 py-3">
+                      <p className="text-sm font-medium text-red-900"> {err_block.err?.error}</p>
+                      <p className="text-sm text-red-700"> {err_block.err?.details[0]}</p>
                     </div>
                   ) : null}
 

@@ -1,4 +1,4 @@
-export type Error = {
+export type HubError = {
     error: string;
     details: string[];
   };
