@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use common::accounts::TestPadawan;
 use jokehub::model::account::{
-    security::{AccessClaims, RefreshClaims, Tokens},
+    security::{api_key::ApiKey, AccessClaims, RefreshClaims, Tokens},
     Account, Tariff,
 };
 
@@ -132,47 +132,36 @@ fn refresh_token() {
 }
 
 #[test]
-fn api_key_regen() {
-    let path: &str = "/v1/account/api-key/key";
+fn api_key() {
+    let path: &str = "/v1/account/api-key";
     let client = common::test_client().lock().unwrap();
     let padawan = TestPadawan::default();
 
     match account::try_login(&client, Box::new(padawan)) {
         Ok(tokens) => {
-            let old_api_key: String;
+            let resp = client
+                .post(path)
+                .header(bearer!((tokens.access_token)))
+                .body(json_string!({
+                    "name": "key_name",
+                    "description": "For use in tests"
+                }))
+                .dispatch();
 
-            // Получаю старый api ключ
+            assert_eq!(resp.status(), Status::Ok);
+
+            let body = assert_body!(resp, ApiKey);
+
+            // Удаление
             {
                 let resp = client
-                    .get("/v1/account")
+                    .delete(format!("{}/{}", path, body.get_key()))
                     .header(bearer!((tokens.access_token)))
                     .dispatch();
 
                 assert_eq!(resp.status(), Status::Ok);
-
-                let body = assert_body!(resp, Account);
-                old_api_key = body.api_key;
-            }
-
-            // Обновляю ключ
-            {
-                let resp = client
-                    .put(path)
-                    .header(bearer!((tokens.access_token)))
-                    .dispatch();
-
-                assert_eq!(resp.status(), Status::Ok);
-
-                #[derive(Deserialize)]
-                struct Resp {
-                    new_key: String,
-                }
-
-                let body = assert_body!(resp, Resp);
-                assert_ne!(body.new_key, old_api_key);
             }
         }
-
         Err(err) => assert!(false, "\n\nFaild to login: {}\n\n", err),
     }
 }

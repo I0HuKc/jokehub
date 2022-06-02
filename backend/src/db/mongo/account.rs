@@ -6,7 +6,7 @@ use mongodb::{bson::doc, sync::Collection};
 
 use crate::model::account::favorites::Favorite;
 use crate::model::account::notification::Notification;
-use crate::model::account::{security::ApiKey, security::Session, User};
+use crate::model::account::{security::api_key::ApiKey, security::Session, User};
 use crate::model::account::{Tariff, Theme};
 use crate::{
     db::mongo::{varys::Varys, Crud},
@@ -86,14 +86,16 @@ impl<'a> User {
 
 macro_crud!(ApiKey);
 impl ApiKey {
-    pub fn get_by_username(client: &Client, username: &str) -> Result<ApiKey, HubError> {
+    pub fn roll(client: &Client, owner: &str) -> Result<Vec<ApiKey>, HubError> {
         let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
-        let filter = doc! {"username": username};
+        let mut cursor = collection.find(doc! {"owner": owner}, None)?;
+        let mut result: Vec<ApiKey> = Vec::new();
 
-        match collection.find_one(filter, None)? {
-            Some(data) => Ok(data),
-            None => Err(err_not_found!("api key")),
+        while let Some(doc) = cursor.next() {
+            result.push(doc?);
         }
+
+        Ok(result)
     }
 
     pub fn get_by_key(client: &Client, key: &str) -> Result<ApiKey, HubError> {
@@ -110,11 +112,11 @@ impl ApiKey {
 
     pub fn update_tariff(
         client: &Client,
-        username: &str,
+        owner: &str,
         new_tariff: Tariff,
     ) -> Result<ApiKey, HubError> {
         let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
-        let filter = doc! {"username": username};
+        let filter = doc! {"owner": owner};
         let update = doc! {"$set": {
             "tariff": new_tariff.to_string().to_lowercase()
         }};
@@ -127,28 +129,20 @@ impl ApiKey {
             }
             Ok(_) => Err(err_not_found!("api key")),
             Err(err) => Err(err_internal!(
-                "Faild to regenerate api key",
+                "Faild to update api key tariff",
                 err.to_string()
             )),
         }
     }
 
-    pub fn regen(client: &Client, username: &str, new_key: String) -> Result<ApiKey, HubError> {
+    pub fn del(client: &Client, key: &str, owner: &str) -> Result<(), HubError> {
         let collection: Collection<ApiKey> = Varys::get(client, Varys::ApiKeys);
-        let filter = doc! {"username": username};
-        let update = doc! {"$set": {"key": new_key}};
+        let filter = doc! {"owner": owner, "key": key};
 
-        match collection.update_one(filter.clone(), update, None) {
-            Ok(ur) if ur.modified_count > 0 => {
-                let data = collection.find_one(filter, None)?.unwrap();
-
-                Ok(data)
-            }
+        match collection.delete_one(filter, None) {
+            Ok(dr) if dr.deleted_count > 0 => Ok(()),
             Ok(_) => Err(err_not_found!("api key")),
-            Err(err) => Err(err_internal!(
-                "Faild to regenerate api key",
-                err.to_string()
-            )),
+            Err(err) => Err(err_internal!("Faild to delete api key", err.to_string())),
         }
     }
 }

@@ -46,13 +46,15 @@ pub fn rocket() -> _ {
                 login,
                 account,
                 refresh_token,
-                regen_api_key,
                 change_password,
                 change_theme,
                 logout,
                 logout_any,
                 delete_account,
                 privilege,
+                // Api Key
+                new_api_key,
+                del_api_key,
                 // Favorite
                 favorite_add,
                 favorite_remove

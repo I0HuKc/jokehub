@@ -75,18 +75,12 @@ pub trait Crud<'a, T>
 where
     T: Serialize + DeserializeOwned + Unpin + std::marker::Send + Sync,
 {
-    fn create(collection: Collection<Document>, data: T) -> Result<InsertOneResult, HubError> {
-        let doc = bson::to_document(&data)?;
+    fn create(collection: Collection<Document>, data: &T) -> Result<InsertOneResult, HubError> {
+        let doc = bson::to_document(data)?;
         let rersult = collection.insert_one(doc, None)?;
 
         Ok(rersult)
     }
-
-    // -> Result<Vec<Favorite>, HubError>
-    // fn slice(collection: Collection<T>, limit: u8, offset: u8, ff: Document ){
-    //     let mut cursor = collection.find(ff, None)?;
-
-    // }
 
     fn get_by_id(collection: Collection<T>, id: &str) -> Result<T, HubError> {
         match collection.find_one(doc! { "_id":  id}, None)? {

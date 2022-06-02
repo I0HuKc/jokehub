@@ -36,7 +36,7 @@ pub async fn create_punch<'f>(
 
     let result = Shrimp::create(
         Varys::get(client.0.as_ref(), Varys::Punch),
-        Shrimp::new(body, tail),
+        &Shrimp::new(body, tail),
     )?;
 
     let resp = json!({"id": result.inserted_id});

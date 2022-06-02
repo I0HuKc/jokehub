@@ -13,7 +13,8 @@ use crate::{
         account::{
             notification::{Notification, NotifyKind},
             security::{
-                ApiKey, AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens,
+                api_key::{ApiKey, NewApiKey},
+                AuthGuard, LevelGuard, RefreshClaims, RefreshResp, Session, Tokens,
             },
             validation::level_validation,
             *,
@@ -31,13 +32,7 @@ pub async fn registration<'f>(
 
     let result = User::create(
         Varys::get(client.0.as_ref(), Varys::Users),
-        User::from(jnu.0.clone()).password_hashing()?,
-    )?;
-
-    // Создание API ключа
-    ApiKey::create(
-        Varys::get(client.0.as_ref(), Varys::ApiKeys),
-        ApiKey::new(jnu.0.username),
+        &User::from(jnu.0.clone()).password_hashing()?,
     )?;
 
     let resp = json!({"id": result.inserted_id});
@@ -72,9 +67,9 @@ pub async fn account<'f>(
 ) -> Result<Json<Account>, HubError> {
     let user = User::get_by_username(client.0.as_ref(), _auth.0.get_username())?;
     let sessions = Session::roll(user.username.as_str(), client.0.as_ref())?;
-    let api_key = ApiKey::get_by_username(client.0.as_ref(), user.username.as_str())?;
+    let api_keys = ApiKey::roll(client.0.as_ref(), user.username.as_str())?;
 
-    Ok(Json(Account::new(user, sessions, api_key.get_key())))
+    Ok(Json(Account::new(user, sessions, api_keys)))
 }
 
 #[post("/account/token/refresh", data = "<jrt>")]
@@ -104,15 +99,30 @@ pub fn refresh_token<'f>(
     Ok(Json(new_tokens))
 }
 
-#[put("/account/api-key/key")]
-pub fn regen_api_key<'f>(_auth: AuthGuard, client: MongoConn<'f>) -> Result<Value, HubError> {
-    let data = ApiKey::regen(
-        client.0.as_ref(),
-        _auth.0.get_username().as_str(),
-        ApiKey::gen_key(),
-    )?;
+#[post("/account/api-key", data = "<jnak>")]
+pub fn new_api_key<'f>(
+    _auth: AuthGuard,
+    client: MongoConn<'f>,
+    jnak: Json<NewApiKey>,
+) -> Result<Json<ApiKey>, HubError> {
+    jnak.0.validate()?;
 
-    Ok(json!({"new_key": data.get_key()}))
+    let api_key: ApiKey = NewApiKey::new(
+        jnak.0.name,
+        jnak.0.description,
+        _auth.0.get_username(),
+        _auth.0.get_tariff(),
+    )
+    .into();
+
+    ApiKey::create(Varys::get(client.0.as_ref(), Varys::ApiKeys), &api_key)?;
+
+    Ok(Json(api_key))
+}
+
+#[delete("/account/api-key/<key>")]
+pub fn del_api_key<'f>(_auth: AuthGuard, client: MongoConn<'f>, key: &str) -> Result<(), HubError> {
+    ApiKey::del(client.0.as_ref(), key, _auth.0.get_username_as_str())
 }
 
 #[post("/account/password/change", data = "<jcp>")]
@@ -218,7 +228,7 @@ pub async fn privilege<'f>(
         notification::Body::new("Your level has been updated", None, None),
     );
 
-    Notification::create(Varys::get(client.0.as_ref(), Varys::Notification), ntf)?;
+    Notification::create(Varys::get(client.0.as_ref(), Varys::Notification), &ntf)?;
 
     Ok(())
 }

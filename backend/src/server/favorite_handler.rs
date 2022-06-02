@@ -22,7 +22,7 @@ pub fn favorite_add<'f>(
         _auth.0.get_username(),
     );
 
-    Favorite::create(Varys::get(client.0.as_ref(), Varys::Favorite), fv)?;
+    Favorite::create(Varys::get(client.0.as_ref(), Varys::Favorite), &fv)?;
 
     Ok(())
 }

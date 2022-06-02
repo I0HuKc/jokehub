@@ -8,8 +8,10 @@ use strum_macros::EnumIter;
 use uuid::Uuid;
 use validator::Validate;
 
+use self::security::api_key::{ApiKey, ApiKeyInfo};
+
 use super::{account::security::Session, validation::validate_query};
-use crate::errors::HubError;
+use crate::{errors::HubError, VectorConvert};
 
 /// Уровни доступа доступные в системе
 #[derive(Clone, Serialize, PartialEq, EnumIter, Deserialize, Debug)]
@@ -189,7 +191,7 @@ pub struct Account {
     pub username: String,
     pub tariff: Tariff,
     pub theme: Theme,
-    pub api_key: String,
+    pub api_keys: Vec<ApiKeyInfo>,
     pub sessions: Vec<Sinfo>,
     pub created_at: String,
     pub updated_at: String,
@@ -219,12 +221,12 @@ impl Sinfo {
 }
 
 impl Account {
-    pub fn new(user: User, sessions: Vec<Session>, api_key: &str) -> Self {
+    pub fn new(user: User, sessions: Vec<Session>, api_keys: Vec<ApiKey>) -> Self {
         Account {
             username: user.username,
             tariff: user.tariff,
             theme: user.theme,
-            api_key: api_key.to_string(),
+            api_keys: Vec::convert(api_keys),
             sessions: Sinfo::vec_convert(sessions),
             created_at: user.created_at.to_rfc3339_string(),
             updated_at: user.updated_at.to_rfc3339_string(),
@@ -388,7 +390,6 @@ pub mod security {
     use chrono::prelude::*;
     use jsonwebtoken::TokenData;
     use jsonwebtoken::{errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Validation};
-    use rand::{distributions::Alphanumeric, Rng};
     use rocket::http::Status;
     use rocket::{
         request, request::FromRequest, request::Outcome, serde::DeserializeOwned, Request,
@@ -402,47 +403,114 @@ pub mod security {
     use crate::{
         err_forbidden, err_unauthorized,
         errors::{ErrorKind, HubError, UnauthorizedErrorKind},
-        model::account::{Level, Tariff},
+        model::account::{security::api_key::ApiKey, Level, Tariff},
     };
     use mongodb::bson::DateTime as MongoDateTime;
     use mongodb::sync::Client;
 
-    #[derive(Serialize, Deserialize)]
-    pub struct ApiKey {
-        key: String,
-        nonce: usize,
-        tariff: Tariff,
-        username: String,
-        created_at: String,
-    }
+    pub mod api_key {
+        use mongodb::bson::DateTime as MongoDateTime;
+        use rand::{distributions::Alphanumeric, Rng};
+        use serde::{Deserialize, Serialize};
+        use validator::Validate;
 
-    impl ApiKey {
-        pub fn new(username: String) -> Self {
-            Self {
-                key: ApiKey::gen_key(),
-                nonce: 0,
-                tariff: Tariff::default(),
-                username,
-                created_at: MongoDateTime::now().to_rfc3339_string(),
+        use crate::model::account::Tariff;
+
+        #[derive(Serialize, Deserialize, Validate)]
+        pub struct NewApiKey {
+            #[validate(length(min = 3, max = 20, message = "Lenght is invalid"))]
+            pub name: String,
+
+            #[validate(length(min = 5, max = 280, message = "Lenght is invalid"))]
+            pub description: Option<String>,
+
+            #[serde(skip)]
+            pub owner: String,
+
+            #[serde(skip)]
+            pub tariff: Tariff,
+        }
+
+        impl NewApiKey {
+            pub fn new(
+                name: String,
+                description: Option<String>,
+                owner: String,
+                tariff: Tariff,
+            ) -> Self {
+                Self {
+                    name,
+                    description,
+                    owner,
+                    tariff,
+                }
             }
         }
 
-        pub fn gen_key() -> String {
-            rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(50)
-                .map(char::from)
-                .collect()
-        }
-    }
-
-    impl ApiKey {
-        pub fn get_key(&self) -> &str {
-            &self.key
+        #[derive(Serialize, Deserialize)]
+        pub struct ApiKey {
+            name: String,
+            description: Option<String>,
+            key: String,
+            nonce: usize,
+            tariff: Tariff,
+            owner: String,
+            created_at: String,
         }
 
-        pub fn get_tariff(&self) -> Tariff {
-            self.tariff.clone()
+        impl ApiKey {
+            fn gen_key() -> String {
+                rand::thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(50)
+                    .map(char::from)
+                    .collect()
+            }
+        }
+
+        impl ApiKey {
+            pub fn get_key(&self) -> &str {
+                &self.key
+            }
+
+            pub fn get_tariff(&self) -> Tariff {
+                self.tariff.clone()
+            }
+        }
+
+        impl From<NewApiKey> for ApiKey {
+            fn from(nak: NewApiKey) -> Self {
+                Self {
+                    name: nak.name,
+                    description: nak.description,
+                    key: ApiKey::gen_key(),
+                    nonce: 0,
+                    tariff: nak.tariff,
+                    owner: nak.owner,
+                    created_at: MongoDateTime::now().to_rfc3339_string(),
+                }
+            }
+        }
+
+        #[derive(Serialize, Deserialize)]
+        pub struct ApiKeyInfo {
+            name: String,
+            description: Option<String>,
+            key: String,
+            nonce: usize,
+            created_at: String,
+        }
+
+        impl From<ApiKey> for ApiKeyInfo {
+            fn from(ak: ApiKey) -> Self {
+                Self {
+                    name: ak.name,
+                    description: ak.description,
+                    key: ak.key,
+                    nonce: ak.nonce,
+                    created_at: ak.created_at,
+                }
+            }
         }
     }
 
@@ -514,8 +582,16 @@ pub mod security {
             return self.username.clone();
         }
 
+        pub fn get_username_as_str(&self) -> &str {
+            return self.username.as_str();
+        }
+
         pub fn get_level(&self) -> Level {
             return self.level.clone();
+        }
+
+        pub fn get_tariff(&self) -> Tariff {
+            return self.tariff.clone();
         }
     }
 
