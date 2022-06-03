@@ -9,6 +9,8 @@ extern crate rocket;
 #[macro_use]
 extern crate dotenv_codegen;
 
+extern crate zxcvbn;
+
 pub trait VectorConvert<F> {
     fn convert<T>(from: Vec<F>) -> Vec<T>
     where

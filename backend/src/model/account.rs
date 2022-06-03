@@ -7,6 +7,7 @@ use std::fmt;
 use strum_macros::EnumIter;
 use uuid::Uuid;
 use validator::Validate;
+use zxcvbn::zxcvbn;
 
 use self::security::api_key::{ApiKey, ApiKeyInfo};
 
@@ -123,6 +124,47 @@ pub struct ChangePassword {
         custom(function = "validate_query", message = "Invalid format")
     )]
     pub new_password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PStrength {
+    throttling_100_hour: String,
+    throttling_10_second: String,
+    throttling_10k_second: String,
+    throttling_10b_second: String,
+}
+
+impl PStrength {
+    pub fn check(password: String) -> Self {
+        let estimate = zxcvbn(password.as_str(), &[]).unwrap();
+
+        Self {
+            throttling_100_hour: estimate
+                .crack_times()
+                .online_throttling_100_per_hour()
+                .to_string(),
+
+            throttling_10_second: estimate
+                .crack_times()
+                .online_no_throttling_10_per_second()
+                .to_string(),
+
+            throttling_10k_second: estimate
+                .crack_times()
+                .offline_slow_hashing_1e4_per_second()
+                .to_string(),
+
+            throttling_10b_second: estimate
+                .crack_times()
+                .offline_fast_hashing_1e10_per_second()
+                .to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PasswordCheck {
+    pub password: String,
 }
 
 /// Нативная структура пользовательских данных

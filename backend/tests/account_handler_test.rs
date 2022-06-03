@@ -8,10 +8,27 @@ use serde::Deserialize;
 use common::accounts::TestPadawan;
 use jokehub::model::account::{
     security::{api_key::ApiKey, AccessClaims, RefreshClaims, Tokens},
-    Account, Tariff,
+    Account, PStrength, Tariff,
 };
 
 use common::accounts as account;
+
+#[test]
+fn password_strength() {
+    let path: &str = "/v1/registration/password-strength";
+    let client = common::test_client().lock().unwrap();
+
+    let resp = client
+        .post(path)
+        .header(ContentType::JSON)
+        .body(json_string!({
+            "password": "1234password"
+        }))
+        .dispatch();
+
+    assert_eq!(resp.status(), Status::Ok);
+    assert_body!(resp, PStrength);
+}
 
 #[test]
 fn auth() {

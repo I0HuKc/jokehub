@@ -42,6 +42,7 @@ pub fn rocket() -> _ {
                 // Random
                 random,
                 // Accounts methods
+                password_strength,
                 registration,
                 login,
                 account,

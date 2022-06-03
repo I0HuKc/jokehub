@@ -23,6 +23,13 @@ use crate::{
     },
 };
 
+#[post("/registration/password-strength", data = "<jp>")]
+pub fn password_strength(jp: Json<PasswordCheck>) -> Result<Json<PStrength>, HubError> {
+    let result = PStrength::check(jp.0.password);
+
+    Ok(Json(result))
+}
+
 #[post("/registration", data = "<jnu>")]
 pub async fn registration<'f>(
     client: MongoConn<'f>,
