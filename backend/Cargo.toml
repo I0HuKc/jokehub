@@ -21,6 +21,7 @@ sha2 = "0.10"
 jsonwebtoken = "7.2.0"
 strum = "0.24.0"
 strum_macros = "0.24"
+zxcvbn = "2"
 
 shrimplib = { path = "./lib" }
 
