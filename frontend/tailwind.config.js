@@ -8,10 +8,6 @@ module.exports = {
       fontFamily: {
         sans: ["CoFo Sans"],
       },
-
-      colors: {
-        "perfo": '#337157',
-      }
     },
   },
   plugins: [],

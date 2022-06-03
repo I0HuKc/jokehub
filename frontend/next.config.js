@@ -1,15 +1,20 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-}
 
 module.exports = {
   async rewrites() {
-      return [
-        {
-          source: '/api/:path*',
-          destination: 'http://jokehub.fun/:path*',
-        },
-      ]
-    },
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://jokehub.fun/:path*",
+      },
+    ];
+  },
+
+  reactStrictMode: true,
+
+  env: {
+    RECAPTCHA_SECRET: "6LcxSEEgAAAAAArBH21uRsSL8yS9N7MwyGg1AHdd",
+  },
+
+  
 };
