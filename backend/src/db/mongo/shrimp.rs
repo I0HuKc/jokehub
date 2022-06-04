@@ -6,7 +6,7 @@ use crate::{
     db::mongo::{shrimp::aggregation::Qilter, Crud},
     err_internal, err_not_found,
     errors::HubError,
-    model::shrimp::{Paws, Shrimp},
+    model::shrimp::{Paws, ReactionKind, Shrimp},
 };
 
 impl<'a, T> Crud<'a, Shrimp<T>> for Shrimp<T>
@@ -57,6 +57,24 @@ where
         match data {
             Some(result) => Ok(bson::from_document(result?)?),
             None => Ok(None),
+        }
+    }
+
+    pub fn add_reaction(
+        collection: &Collection<Shrimp<T>>,
+        record_id: &str,
+        reaction: ReactionKind,
+    ) -> Result<(), HubError> {
+        let query = doc! {"_id": record_id};
+        let update = doc! {"$inc": {
+                format!("_meta-data.reactions.{}", reaction.to_string().to_lowercase()): 1
+            }
+        };
+
+        match collection.update_one(query, update, None) {
+            Ok(ur) if ur.modified_count > 0 => Ok(()),
+            Ok(_) => Err(err_not_found!(collection.name())),
+            Err(err) => Err(err_internal!("Faild to add reaction", err)),
         }
     }
 }

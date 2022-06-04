@@ -1,8 +1,10 @@
 use lingua::Language;
 use mongodb::bson::DateTime as MongoDateTime;
 use rand::prelude::SliceRandom;
+use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::fmt;
 use uuid::Uuid;
 
@@ -107,6 +109,8 @@ pub struct Tail {
 
     pub tags: Vec<String>,
 
+    pub reactions: HashMap<ReactionKind, usize>,
+
     #[serde(rename = "language")]
     pub lang: String,
 }
@@ -121,6 +125,7 @@ impl Tail {
             flags,
             lang: lang.to_string(),
             author,
+            reactions: HashMap::new(),
             tags: tags.to_vec(),
         }
     }
@@ -230,6 +235,23 @@ pub enum Category {
     Punch,
 }
 
+impl<'a> FromParam<'a> for Category {
+    type Error = HubError;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        match param {
+            "anecdote" => Ok(Self::Anecdote),
+            "joke" => Ok(Self::Joke),
+            "punch" => Ok(Self::Punch),
+
+            _ => Err(HubError::new_unprocessable(
+                "Reaction kind is invalid",
+                None,
+            )),
+        }
+    }
+}
+
 impl Category {
     /// Выбор случайной категории.
     /// Если есть предпочитаемые категории, выбирается случайная из предоставленных.
@@ -282,5 +304,48 @@ impl Category {
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+pub enum ReactionKind {
+    #[serde(rename = "laughing")]
+    Laughing,
+
+    #[serde(rename = "enraged")]
+    Enraged,
+
+    #[serde(rename = "fire")]
+    Fire,
+
+    #[serde(rename = "thumbs_up")]
+    ThumbsUp,
+
+    #[serde(rename = "thumbs_down")]
+    ThumbsDown,
+}
+
+impl fmt::Display for ReactionKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl<'a> FromParam<'a> for ReactionKind {
+    type Error = HubError;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        match param {
+            "laughing" => Ok(Self::Laughing),
+            "enraged" => Ok(Self::Enraged),
+            "fire" => Ok(Self::Fire),
+            "thumbs_up" => Ok(Self::ThumbsUp),
+            "thumbs_down" => Ok(Self::ThumbsDown),
+
+            _ => Err(HubError::new_unprocessable(
+                "Reaction kind is invalid",
+                None,
+            )),
+        }
     }
 }

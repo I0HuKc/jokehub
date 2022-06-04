@@ -142,6 +142,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
                 },
                 "author": "shavedkiwi",
                 "tags": ["general"],
+                "reactions": {},
                 "language": "russian"
             }
         }
@@ -162,6 +163,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
                 },
                 "author": "shavedkiwi",
                 "tags": ["general"],
+                "reactions": {},
                 "language": "russian"
             }
         }
@@ -182,6 +184,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
                 },
                 "author": "shavedkiwi",
                 "tags": ["for_test"],
+                "reactions": {},
                 "language": "russian"
             }
         }
@@ -202,6 +205,7 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
                 },
                 "author": "shavedkiwi",
                 "tags": ["for_test"],
+                "reactions": {},
                 "language": "english"
             }
         }

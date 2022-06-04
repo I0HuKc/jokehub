@@ -4,7 +4,7 @@ mod base_handler;
 mod favorite_handler;
 mod joke_handler;
 mod punch_handler;
-mod random_handler;
+mod shrimp_handler;
 
 mod config;
 mod lingua;
@@ -15,7 +15,7 @@ use self::lingua::LinguaManage;
 
 use {
     account_handler::*, anecdote_handler::*, base_handler::*, favorite_handler::*, joke_handler::*,
-    punch_handler::*, random_handler::*,
+    punch_handler::*, shrimp_handler::*,
 };
 
 #[launch]
@@ -39,8 +39,9 @@ pub fn rocket() -> _ {
                 create_joke,
                 get_joke,
                 delete_joke,
-                // Random
+                // Shrimp methods
                 random,
+                add_reaction,
                 // Accounts methods
                 password_strength,
                 registration,
@@ -53,10 +54,10 @@ pub fn rocket() -> _ {
                 logout_any,
                 delete_account,
                 privilege,
-                // Api Key
+                // Api-Key methods
                 new_api_key,
                 del_api_key,
-                // Favorite
+                // Favorite methods
                 favorite_add,
                 favorite_remove
             ],
