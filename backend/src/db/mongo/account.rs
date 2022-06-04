@@ -106,7 +106,7 @@ impl ApiKey {
         match collection.find_one_and_update(filter, update, None) {
             Ok(Some(data)) => Ok(data),
             Ok(None) => Err(err_not_found!("api key")),
-            Err(err) => Err(err_internal!("Faiild to get api key", err.to_string())),
+            Err(err) => Err(err_internal!("Faild to get api key", err.to_string())),
         }
     }
 
