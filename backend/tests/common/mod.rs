@@ -1,7 +1,7 @@
 pub mod accounts;
 pub mod anecdote;
-pub mod punch;
 pub mod joke;
+pub mod punch;
 
 use once_cell::sync::OnceCell;
 use rocket::local::blocking::{Client, LocalResponse};
@@ -25,6 +25,13 @@ macro_rules! bearer {
 }
 
 #[macro_export]
+macro_rules! apikey {
+    ($key:literal) => {
+        Header::new("Api-Key", $key)
+    };
+}
+
+#[macro_export]
 macro_rules! json_string {
     ($value:tt) => {
         serde_json::to_string(&serde_json::json!($value)).expect("cannot json stringify")
@@ -33,7 +40,7 @@ macro_rules! json_string {
 
 #[macro_export]
 macro_rules! assert_body {
-    ( $resp:expr, $t:tt ) => {{
+    ( $resp:expr, $t:tt$(<$g:path>)?) => {{
         use serde_json::Value;
 
         let body = $resp.into_string().unwrap();

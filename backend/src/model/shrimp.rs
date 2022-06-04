@@ -318,10 +318,10 @@ pub enum ReactionKind {
     #[serde(rename = "fire")]
     Fire,
 
-    #[serde(rename = "thumbs_up")]
+    #[serde(rename = "thumbsup")]
     ThumbsUp,
 
-    #[serde(rename = "thumbs_down")]
+    #[serde(rename = "thumbsdown")]
     ThumbsDown,
 }
 
@@ -339,8 +339,8 @@ impl<'a> FromParam<'a> for ReactionKind {
             "laughing" => Ok(Self::Laughing),
             "enraged" => Ok(Self::Enraged),
             "fire" => Ok(Self::Fire),
-            "thumbs_up" => Ok(Self::ThumbsUp),
-            "thumbs_down" => Ok(Self::ThumbsDown),
+            "thumbsup" => Ok(Self::ThumbsUp),
+            "thumbsdown" => Ok(Self::ThumbsDown),
 
             _ => Err(HubError::new_unprocessable(
                 "Reaction kind is invalid",

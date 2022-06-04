@@ -27,21 +27,23 @@ pub fn rocket() -> _ {
         .mount(
             "/v1",
             rocket::routes![
-                // Punch methods
+                // Anecdote methods
                 create_anecdote,
                 get_anecdote,
                 delete_anecdote,
+                reaction_anecdote,
                 // Punch methods
                 create_punch,
                 get_punch,
                 delete_punch,
+                reaction_punch,
                 // Jokes methods
                 create_joke,
                 get_joke,
                 delete_joke,
+                reaction_joke,
                 // Shrimp methods
                 random,
-                add_reaction,
                 // Accounts methods
                 password_strength,
                 registration,

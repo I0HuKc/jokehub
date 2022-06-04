@@ -4,7 +4,10 @@ use serde_json::{json, Value};
 use validator::Validate;
 
 use crate::model::{
-    account::security::{AuthGuard, LevelGuard, TariffGuard},
+    account::{
+        security::{AuthGuard, LevelGuard},
+        Tariff,
+    },
     punch::*,
     shrimp::{Flags, Shrimp, Tail},
     validation::uuid_validation,
@@ -15,7 +18,14 @@ use crate::{
     err_not_found,
     errors::HubError,
     server::lingua::Lingua,
+    shrimp_reaction_handler,
 };
+
+shrimp_reaction_handler!(
+    reaction_punch,
+    "/punch/reaction/<record_id>/<reaction_kind>",
+    Punch
+);
 
 #[post("/punch/new", data = "<jnp>")]
 pub async fn create_punch<'f>(
@@ -45,7 +55,7 @@ pub async fn create_punch<'f>(
 
 #[get("/punch/<id>")]
 pub async fn get_punch<'f>(
-    _tariff: TariffGuard,
+    _api_key: ApiKeyGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<Value, HubError> {
@@ -54,7 +64,10 @@ pub async fn get_punch<'f>(
         uuid_validation(id)?,
     )?;
 
-    Ok(result.tariffing(&_tariff.0, &_tariff.1))
+    match _api_key.0 {
+        Some(data) => Ok(result.tariffing(&data.get_tariff(), &None)),
+        None => Ok(result.tariffing(&Tariff::default(), &None)),
+    }
 }
 
 #[delete("/punch/<id>")]

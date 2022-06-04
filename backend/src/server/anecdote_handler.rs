@@ -7,13 +7,23 @@ use crate::{
     err_not_found,
     errors::HubError,
     model::{
-        account::security::{AuthGuard, LevelGuard, TariffGuard},
+        account::{
+            security::{AuthGuard, LevelGuard},
+            Tariff,
+        },
         anecdote::*,
         shrimp::{Flags, Shrimp, Tail},
         validation::uuid_validation,
     },
     server::lingua::Lingua,
+    shrimp_reaction_handler,
 };
+
+shrimp_reaction_handler!(
+    reaction_anecdote,
+    "/anecdote/reaction/<record_id>/<reaction_kind>",
+    Anecdote
+);
 
 #[post("/anecdote/new", data = "<jna>")]
 pub async fn create_anecdote<'f>(
@@ -41,7 +51,7 @@ pub async fn create_anecdote<'f>(
 
 #[get("/anecdote/<id>")]
 pub async fn get_anecdote<'f>(
-    _tariff: TariffGuard,
+    _api_key: ApiKeyGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<Value, HubError> {
@@ -50,7 +60,10 @@ pub async fn get_anecdote<'f>(
         uuid_validation(id)?,
     )?;
 
-    Ok(result.tariffing(&_tariff.0, &_tariff.1))
+    match _api_key.0 {
+        Some(data) => Ok(result.tariffing(&data.get_tariff(), &None)),
+        None => Ok(result.tariffing(&Tariff::default(), &None)),
+    }
 }
 
 #[delete("/anecdote/<id>")]

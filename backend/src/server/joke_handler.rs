@@ -2,18 +2,26 @@ use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde_json::{json, Value};
 
+use crate::model::account::Tariff;
 use crate::server::lingua::Lingua;
 use crate::{
     db::mongo::{varys::Varys, Crud, MongoConn},
     err_not_found,
     errors::HubError,
     model::{
-        account::security::{AuthGuard, LevelGuard, TariffGuard},
+        account::security::{AuthGuard, LevelGuard},
         joke::*,
         shrimp::{Flags, Shrimp, Tail},
         validation::uuid_validation,
     },
+    shrimp_reaction_handler,
 };
+
+shrimp_reaction_handler!(
+    reaction_joke,
+    "/joke/reaction/<record_id>/<reaction_kind>",
+    Joke
+);
 
 #[post("/joke/new", data = "<jnj>")]
 pub async fn create_joke<'f>(
@@ -42,7 +50,7 @@ pub async fn create_joke<'f>(
 
 #[get("/joke/<id>")]
 pub async fn get_joke<'f>(
-    _tariff: TariffGuard,
+    _api_key: ApiKeyGuard,
     client: MongoConn<'f>,
     id: &str,
 ) -> Result<Value, HubError> {
@@ -51,7 +59,10 @@ pub async fn get_joke<'f>(
         uuid_validation(id)?,
     )?;
 
-    Ok(result.tariffing(&_tariff.0, &_tariff.1))
+    match _api_key.0 {
+        Some(data) => Ok(result.tariffing(&data.get_tariff(), &None)),
+        None => Ok(result.tariffing(&Tariff::default(), &None)),
+    }
 }
 
 #[delete("/joke/<id>")]

@@ -489,7 +489,7 @@ pub mod security {
             }
         }
 
-        #[derive(Serialize, Deserialize)]
+        #[derive(Debug, Serialize, Deserialize)]
         pub struct ApiKey {
             name: String,
             description: Option<String>,

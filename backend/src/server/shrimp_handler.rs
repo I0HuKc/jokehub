@@ -1,10 +1,9 @@
 use mongodb::bson::doc;
 use serde_json::Value;
 
-use crate::model::shrimp::ReactionKind;
 use crate::{
     db::mongo::{shrimp::aggregation::Qilter, varys::Varys, MongoConn},
-    err_not_found, err_unauthorized,
+    err_not_found,
     errors::HubError,
     model::{
         account::security::ApiKeyGuard,
@@ -16,45 +15,33 @@ use crate::{
     },
 };
 
-// macro_rules! add_reaction {
-//     ($category:tt) => {
-//         {
-//             use crate::model::shrimp::ReactionKind;
+#[macro_export]
+macro_rules! shrimp_reaction_handler {
+    ($f:ident, $path:literal, $category:tt) => {
+        use crate::model::account::security::ApiKeyGuard;
+        use crate::model::shrimp::{Category, ReactionKind};
 
-//             #[post("/shrimp/reaction/<record_id>/<reaction_kind>")]
-//             pub fn add_reaction<'f>(
-//                 _api_key: ApiKeyGuard,
-//                 client: MongoConn<'f>,
-//                 category: Category,
-//                 record_id: &str,
-//                 reaction_kind: ReactionKind,
-//             ) -> Result<(), HubError> {
-//             let res = Shrimp<>
-//                 Ok(())
-//             }
-//         }
-//     };
-// }
+        #[post($path)]
+        pub fn $f<'f>(
+            _api_key: ApiKeyGuard,
+            client: MongoConn<'f>,
+            record_id: &str,
+            reaction_kind: ReactionKind,
+        ) -> Result<(), HubError> {
+            match _api_key.0 {
+                Some(_) => Shrimp::<$category>::add_reaction(
+                    &Varys::get(client.0.as_ref(), Category::$category.into()),
+                    record_id,
+                    reaction_kind,
+                ),
 
-#[post("/shrimp/reaction/<record_id>/<reaction_kind>")]
-pub fn add_reaction<'f>(
-    _api_key: ApiKeyGuard,
-    client: MongoConn<'f>,
-    record_id: &str,
-    reaction_kind: ReactionKind,
-) -> Result<(), HubError> {
-    match _api_key.0 {
-        Some(_) => Shrimp::<Joke>::add_reaction(
-            &Varys::get(client.0.as_ref(), Category::Joke.into()),
-            record_id,
-            reaction_kind,
-        ),
-
-        None => Err(err_unauthorized!(
-            "Api-Key is not found",
-            "Api-Key must be set in the header with the name `Api-Key`"
-        )),
-    }
+                None => Err(crate::err_unauthorized!(
+                    "Api-Key is not found",
+                    "Api-Key must be set in the header with the name `Api-Key`"
+                )),
+            }
+        }
+    };
 }
 
 #[get("/random?<category>&<flag>&<tag>&<author>&<lang>")]
