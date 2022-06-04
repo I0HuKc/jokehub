@@ -96,6 +96,18 @@ mongo --username $MONGO_USER --password $MONGO_USER_PASSWORD --authenticationDat
             }
         }
     );
+    db.api_keys.insertOne(
+        {
+            "_id": ObjectId("56955ca46063c5600627f393"),
+            "name": "test_key",
+            "description": "Api-Key for tests",
+            "key": "5Jh0Y7u6zJfK1PDdbd1GiJ9ahvoHoJz55FfmQQr8oSz7dcoi3o",
+            "nonce": NumberLong(0),
+            "tariff": "enterprice",
+            "owner": "tsith",
+            "created_at": "2022-06-04T16:30:49.952Z"
+        }
+    );
 
     db.createCollection("anecdote");
     db.anecdote.createIndex(
