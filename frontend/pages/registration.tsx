@@ -23,11 +23,6 @@ const RegistrationPage = () => {
     err?: string;
   }
 
-  // interface ErrBlock {
-  //   display?: boolean;
-  //   err?: HubError;
-  // }
-
   const [reg_state, setRegState] = React.useState<RegForm>();
   const [content_state, setContetnState] = React.useState<ContentState>();
   // const [err_block, togErrBlock] = React.useState<ErrBlock>();
@@ -161,14 +156,7 @@ const RegistrationPage = () => {
                             {content_state?.hack_time}
                           </p>
                         </div>
-                      ) : (
-                        <div className="flex flex-row items-center gap-x-1.5 select-none">
-                          <IconLightBlub className="h-4 stroke-stone-500" />
-                          <p className="text-xs text-stone-400 font-sans">
-                            Write a strong password :)
-                          </p>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                     <div className="flex flex-row justify-end gap-x-1.5 w-1/2">
                       <p className="font-sans text-xs text-stone-400">
@@ -237,7 +225,7 @@ const RegistrationPage = () => {
               Already have an account?
             </p>
             <Link href="/login">
-              <span className="font-sans text-sm text-stone-400 font-medium hover:text-amber-500 cursor-pointer transition duration-300 ease-in-out">
+              <span className="font-sans text-sm text-stone-400 font-medium hover:text-[#280700] cursor-pointer transition duration-300 ease-in-out">
                 Login
               </span>
             </Link>
